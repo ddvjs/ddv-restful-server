@@ -1,0 +1,57 @@
+#!/usr/bin/env node
+'use strict'
+// 标题
+process.title = 'ddvRestful'
+const fs = require('fs')
+const path = require('path')
+const logger = require('../lib/logger.js')
+const rootDir = path.resolve('.', './')
+const without = require('lodash').without
+
+var siteConfigFileName = 'site.config.js'
+
+logger.log('starting...')
+// --config-file option
+var indexOfConfig = false
+if (process.argv.indexOf('--config-file') !== -1) {
+  indexOfConfig = process.argv.indexOf('--config-file')
+} else if (process.argv.indexOf('-c') !== -1) {
+  indexOfConfig = process.argv.indexOf('-c')
+}
+
+if (indexOfConfig !== false) {
+  siteConfigFileName = process.argv.slice(indexOfConfig)[1]
+  process.argv = without(process.argv, '--config-file', '-c', siteConfigFileName)
+}
+
+// 尝试获取配置文件地址
+var siteConfigFile = path.resolve(rootDir, siteConfigFileName)
+if (!fs.existsSync(siteConfigFile) && siteConfigFileName !== 'site.config.js') {
+  siteConfigFileName = 'site.config.js'
+  // 再次参数获取
+  siteConfigFile = path.resolve(rootDir, siteConfigFileName)
+}
+if (!fs.existsSync(siteConfigFile) && siteConfigFileName !== 'ddv.config.js') {
+  // 再次参数获取
+  siteConfigFile = path.resolve(rootDir, 'ddv.config.js')
+}
+
+var options = {}
+if (fs.existsSync(siteConfigFile)) {
+  options = require(siteConfigFile)
+} else {
+  console.log(`Could not locate ${siteConfigFile}`) // eslint-disable-line no-console
+}// 引入配置信息-Import and Set Nuxt.js options
+
+if (typeof options.rootDir !== 'string') {
+  options.rootDir = rootDir
+}
+var worker
+try {
+  worker = require('ddv-restful-server')
+} catch (e) {
+  worker = require(path.resolve(path.join(__dirname, '../'), require('../package.json').main))
+}
+options.appPath = options.appPath ? path.join(rootDir, options.appPath) : path.resolve(rootDir, 'app')
+worker.serverStart(options, siteConfigFile)
+
