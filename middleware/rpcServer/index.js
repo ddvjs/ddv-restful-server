@@ -5,6 +5,5 @@ module.exports = function rpcServerMiddleware (options) {
       console.log(msg, 'test')
       ws.send('rpcServer' + msg + 'test')
     })
-    console.log('socket', req.testing)
   }
 }

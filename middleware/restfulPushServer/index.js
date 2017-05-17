@@ -5,6 +5,5 @@ module.exports = function restfulPushServerMiddleware (options) {
       console.log(msg, 'test')
       ws.send('restfulPushServer' + msg + 'test')
     })
-    console.log('socket', req.testing)
   }
 }
