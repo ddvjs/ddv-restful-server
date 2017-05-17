@@ -41,7 +41,7 @@ if (fs.existsSync(siteConfigFile)) {
   options = require(siteConfigFile)
 } else {
   console.log(`Could not locate ${siteConfigFile}`) // eslint-disable-line no-console
-}// 引入配置信息-Import and Set Nuxt.js options
+}// 引入配置信息-Import and Set site.config.js options
 
 if (typeof options.rootDir !== 'string') {
   options.rootDir = rootDir
