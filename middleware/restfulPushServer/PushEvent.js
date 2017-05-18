@@ -4,6 +4,7 @@ const worker = require('ddv-worker')
 const workerUtil = require('ddv-worker/util')
 const WebSocket = require('ws')
 const PushBaseEvent = require('./PushBaseEvent.js')
+const apiModelProxy = require('./apiModelProxy.js')
 const ddvRowraw = require('ddv-rowraw')
 const logger = require('../../lib/logger.js')
 class PushEvent extends PushBaseEvent {
@@ -18,7 +19,7 @@ class PushEvent extends PushBaseEvent {
     // 获取文件事件
     this.on('protocol::push', this.onMessagePush.bind(this))
     // 获取文件事件
-    this.on('protocol::apimodelproxy', this.apiModelProxy.bind(this))
+    this.on('protocol::apimodelproxy', this.onApiModelProxy.bind(this))
     this.on(['push', 'close', '/v1_0/init'], this.pushClientClose.bind(this))
     this.on(['push', 'open', '/v1_0/init'], this.pushClientOpen.bind(this))
     this.on(['push', 'ping', '/v1_0/init'], this.pushClientPing.bind(this))
@@ -43,7 +44,43 @@ class PushEvent extends PushBaseEvent {
   pushClientPing (headers, body, res) {
   }
   // 代理访问api服务器
-  apiModelProxy (res) {
+  onApiModelProxy (res) {
+    var requestId, body
+    if (this.ws.readyState !== WebSocket.OPEN) {
+      logger.error(new Error(`${this.gwcid}Has been closed, on onApiModelProxy`))
+      return
+    }
+    if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
+      return
+    }
+    body = res.bodytype === 'buffer' ? Buffer(0) : ''
+    apiModelProxy(res, this.options)
+    .then(({headers, statusCode, statusMessage, data}) => {
+      if (Buffer.isBuffer(body)) {
+        body = Buffer.concat([body, data])
+      } else {
+        body += data
+      }
+      data = void 0
+      return ddvRowraw.stringifyPromise({
+        'request_id': requestId,
+        'headers': JSON.stringify(headers)
+      }, body, `APIMODELPROXY/1.0 ${statusCode || '0'} ${statusMessage || 'Unknow Error'}`)
+      .then(raw => this.send(raw))
+    })
+    .catch(e => {
+      return ddvRowraw.stringifyPromise({
+        'request_id': requestId,
+        'headers': '{}',
+        'msg': e.message,
+        'message': e.message
+      }, body, `APIMODELPROXY/1.0 400 ${e.errorId || 'Unknow Error'}`)
+      .then(raw => this.send(raw))
+    })
+    .catch(e => {
+      logger.error(`[gwcid:${this.gwcid}]onApiModelProxy error`)
+      logger.error(e)
+    })
   }
   // 发送信息个用户，信息来源rpc
   sendMsgToUser (headers, body) {
@@ -77,8 +114,13 @@ class PushEvent extends PushBaseEvent {
   }
 }
 worker.sendMessageByConnId = sendMessageByConnId
-function sendMessageByConnId (connId, headers, body) {
-  if (wsConnQueue && wsConnQueue[connId] && workerUtil.isFunction(wsConnQueue[connId].sendMsgToUser)) {
+function sendMessageByConnId (connId, type, headers, body) {
+  if (!(type && type === 'restfulPushServer')) {
+    let e = new Error('type error')
+    e.errorId = 'TYPE_CONN'
+    return Promise.reject(e)
+  }
+  if (!(wsConnQueue && wsConnQueue[connId] && workerUtil.isFunction(wsConnQueue[connId].sendMsgToUser))) {
     let e = new Error('find not user')
     e.errorId = 'FIND_NOT_CONN'
     return Promise.reject(e)
