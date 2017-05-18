@@ -41,18 +41,28 @@ class PushEvent extends PushBaseEvent {
       logger.error(new Error(`${this.gwcid}Has been closed, on pushClose`))
       return
     }
-    if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
+    requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid
+
+    if (!(res.headers && requestId)) {
       return
     }
   }
   // 打开推送
   pushOpen (headers, body, res) {
-    var requestId
+    var headersObj = Object.create(null)
+
     if (this.ws.readyState !== WebSocket.OPEN) {
       logger.error(new Error(`${this.gwcid}Has been closed, on pushOpen`))
       return
     }
-    if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
+    // 请求id
+    headersObj.requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid
+    // 全局链接id
+    headersObj.gwcid = this.gwcid
+    // 服务器唯一识别号
+    headersObj.serverGuid = this.serverGuid
+
+    if (!(res.headers && headersObj.requestId)) {
       return
     }
   }

@@ -49,7 +49,9 @@ class PushBaseEvent extends EventEmitter {
           return this.send('The server does not support this request for the time being')
         }
       } else if (res.type === 'response') {
-        this.onMessageResponse(res)
+        process.nextTick(() => {
+          this.onMessageResponse(res)
+        })
       } else {
         return this.send(`not find type: ${res.type}`)
       }
