@@ -1,6 +1,5 @@
 'use strict'
 const EventEmitter = require('events')
-const wsConnQueue = require('./wsConnQueue.js')
 const workerUtil = require('ddv-worker/util')
 const WebSocket = require('ws')
 const ddvRowraw = require('ddv-rowraw')
@@ -10,7 +9,6 @@ class PushBaseEvent extends EventEmitter {
     super()
     this.baseInit(options, ws, req)
     this.wsEventBaseInit()
-    this.pushEventBaseInit()
   }
   // 初始化
   baseInit (options, ws, req) {
@@ -18,41 +16,21 @@ class PushBaseEvent extends EventEmitter {
     this.options = options
     this.ws = ws
     this.req = req
-    this.requestId = req.requestId || ws.requestId
+    this.connId = req.connId || ws.connId
     this.connTime = req.connTime
     this.workerId = req.workerId
     this.serverGuid = req.serverGuid
     this.gwcidTimeStamp = req.gwcidTimeStamp
     this.gwcid = req.gwcid
-    // 如果队列没有这个对象就加入这个对象
-    wsConnQueue[this.requestId] = wsConnQueue[this.requestId] || this
   }
   // 初始化
   wsEventBaseInit () {
     this.ws.on('message', this.onMessage.bind(this))
     this.ws.on('close', this.onClose.bind(this))
   }
-  // 初始化
-  pushEventBaseInit () {
-  // 获取文件事件
-    this.on('protocol::push', this.onMessagePush.bind(this))
-  }
   // 收到消息的时候
   onClose () {
-    if (wsConnQueue[this.requestId]) {
-      workerUtil.isFunction(wsConnQueue[this.requestId].destroy) && wsConnQueue[this.requestId].destroy()
-      delete wsConnQueue[this.requestId]
-    }
-  }
-  // 推送类型的信息
-  onMessagePush (res) {
-    if (!(res.method && res.path && this.emit(['push', res.method.toLowerCase(), res.path], res.headers, res.body, res))) {
-      this.send(`Push request not found, not find method:${res.method}`)
-      .catch(e => {
-        logger.error(`[gwcid:${this.gwcid}]onMessagePush error`)
-        logger.error(e)
-      })
-    }
+
   }
   // 收到消息的时候
   onMessage (body) {
@@ -88,7 +66,7 @@ class PushBaseEvent extends EventEmitter {
     if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
       return
     }
-    if (this.processRequest && (t = this.processRequest[requestId]) && t.length === 2) {
+    if (this.processRequest && (t = this.processRequest[requestId]) && t.length > 1) {
       // 删除进程
       delete this.processRequest[requestId]
       code = parseInt(res.status || 0) || 0
@@ -112,7 +90,7 @@ class PushBaseEvent extends EventEmitter {
       headers = body = start = void 0
       this.processRequest = this.processRequest || Object.create(null)
       return new Promise((resolve, reject) => {
-        this.processRequest[requestId] = [resolve, reject]
+        this.processRequest[requestId] = [resolve, reject, new Date()]
         requestId = void 0
       })
     })
@@ -151,28 +129,6 @@ class PushBaseEvent extends EventEmitter {
         }
         key = void 0
       })
-    })
-  }
-
-  // 发送信息个用户，信息来源rpc
-  sendMsgToUser (headers, body, cb) {
-    if (this.ws.readyState !== WebSocket.OPEN) {
-      logger.error(`${this.gwcid}Has been closed, on sendMsgToUser`)
-      return
-    }
-    // 转换推送类型
-    if (this.bodytype === 'buffer' && ((typeof body) === 'string')) {
-      body = new Buffer(body, 'utf-8')
-    } else if (this.bodytype === 'string' && Buffer.isBuffer(body)) {
-      body = body.toString('utf-8')
-    }
-    headers['push-path'] = (headers['push-path'].charAt(0) === '/' ? '' : '/') + headers['push-path']
-    return ddvRowraw.stringifyPromise({}, body, `MESSAGE ${headers['push-path']} PUSH/1.0`)
-    .then(raw => this.send(raw))
-    .catch(e => {
-      let resError = new Error('send to user fail')
-      resError.errorId = 'SEND_TO_USER_FAIL'
-      return Promise.reject(resError)
     })
   }
 }
