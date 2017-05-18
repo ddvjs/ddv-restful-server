@@ -66,7 +66,6 @@ class PushEvent extends PushBaseEvent {
         'request_id': requestId,
         'headers': JSON.stringify(headers)
       }, body, `APIMODELPROXY/1.0 ${statusCode || '0'} ${statusMessage || 'Unknow Error'}`)
-      .then(raw => this.send(raw))
     })
     .catch(e => {
       return ddvRowraw.stringifyPromise({
@@ -75,8 +74,8 @@ class PushEvent extends PushBaseEvent {
         'msg': e.message,
         'message': e.message
       }, body, `APIMODELPROXY/1.0 400 ${e.errorId || 'Unknow Error'}`)
-      .then(raw => this.send(raw))
     })
+    .then(raw => this.send(raw))
     .catch(e => {
       logger.error(`[gwcid:${this.gwcid}]onApiModelProxy error`)
       logger.error(e)
