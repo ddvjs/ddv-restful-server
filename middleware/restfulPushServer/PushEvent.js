@@ -54,7 +54,9 @@ class PushEvent extends PushBaseEvent {
       return
     }
     body = res.bodytype === 'buffer' ? Buffer(0) : ''
+    // 试图请求
     apiModelProxy(res, this.options)
+    // 有请求结果
     .then(({headers, statusCode, statusMessage, data}) => {
       if (Buffer.isBuffer(body)) {
         body = Buffer.concat([body, data])
@@ -62,12 +64,15 @@ class PushEvent extends PushBaseEvent {
         body += data
       }
       data = void 0
+      // 序列化流
       return ddvRowraw.stringifyPromise({
         'request_id': requestId,
         'headers': JSON.stringify(headers)
       }, body, `APIMODELPROXY/1.0 ${statusCode || '0'} ${statusMessage || 'Unknow Error'}`)
     })
+    // 中途异常
     .catch(e => {
+      // 序列化流
       return ddvRowraw.stringifyPromise({
         'request_id': requestId,
         'headers': '{}',
@@ -76,6 +81,7 @@ class PushEvent extends PushBaseEvent {
       }, body, `APIMODELPROXY/1.0 400 ${e.errorId || 'Unknow Error'}`)
     })
     .then(raw => this.send(raw))
+    // 发送异常回去还是有异常打印日志
     .catch(e => {
       logger.error(`[gwcid:${this.gwcid}]onApiModelProxy error`)
       logger.error(e)
