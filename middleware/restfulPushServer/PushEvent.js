@@ -20,9 +20,9 @@ class PushEvent extends PushBaseEvent {
     this.on('protocol::push', this.onMessagePush.bind(this))
     // 获取文件事件
     this.on('protocol::apimodelproxy', this.onApiModelProxy.bind(this))
-    this.on(['push', 'close', '/v1_0/init'], this.pushClientClose.bind(this))
-    this.on(['push', 'open', '/v1_0/init'], this.pushClientOpen.bind(this))
-    this.on(['push', 'ping', '/v1_0/init'], this.pushClientPing.bind(this))
+    this.on(['push', 'ping', '/v1_0/init'], this.pushPingHeartbeat.bind(this))
+    this.on(['push', 'close', '/v1_0/init'], this.pushClose.bind(this))
+    this.on(['push', 'open', '/v1_0/init'], this.pushOpen.bind(this))
   }
   // 推送类型的信息
   onMessagePush (res) {
@@ -35,13 +35,53 @@ class PushEvent extends PushBaseEvent {
     }
   }
   // 关闭推送
-  pushClientClose (headers, body, res) {
+  pushClose (headers, body, res) {
+    var requestId
+    if (this.ws.readyState !== WebSocket.OPEN) {
+      logger.error(new Error(`${this.gwcid}Has been closed, on pushClose`))
+      return
+    }
+    if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
+      return
+    }
   }
   // 打开推送
-  pushClientOpen (headers, body, res) {
+  pushOpen (headers, body, res) {
+    var requestId
+    if (this.ws.readyState !== WebSocket.OPEN) {
+      logger.error(new Error(`${this.gwcid}Has been closed, on pushOpen`))
+      return
+    }
+    if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
+      return
+    }
   }
   // 打开推送ping
-  pushClientPing (headers, body, res) {
+  pushPingHeartbeat (headers, body, res) {
+    var requestId
+    if (this.ws.readyState !== WebSocket.OPEN) {
+      logger.error(new Error(`${this.gwcid}Has been closed, on pushPingHeartbeat`))
+      return
+    }
+    if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
+      return
+    }
+
+    if (headers.bodytype && ['string', 'buffer'].indexOf(headers.bodytype) > -1) {
+      this.bodytype = headers.bodytype
+    } else {
+      this.bodytype = 'auto'
+    }
+
+    ddvRowraw.stringifyPromise(
+      {
+        request_id: requestId
+      },
+      ((this.bodytype === 'buffer' || (this.bodytype === 'auto' && res.bodytype === 'buffer')) ? new Buffer(0) : ''),
+      'PUSH/1.0 200 OK'
+    )
+    .then(raw => this.send(raw))
+    headers = body = res = void 0
   }
   // 代理访问api服务器
   onApiModelProxy (res) {
