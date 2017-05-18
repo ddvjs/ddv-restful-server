@@ -19,6 +19,9 @@ class PushEvent extends PushBaseEvent {
     this.on('protocol::push', this.onMessagePush.bind(this))
     // 获取文件事件
     this.on('protocol::apimodelproxy', this.apiModelProxy.bind(this))
+    this.on(['push', 'close', '/v1_0/init'], this.pushClientClose.bind(this))
+    this.on(['push', 'open', '/v1_0/init'], this.pushClientOpen.bind(this))
+    this.on(['push', 'ping', '/v1_0/init'], this.pushClientPing.bind(this))
   }
   // 推送类型的信息
   onMessagePush (res) {
@@ -29,6 +32,15 @@ class PushEvent extends PushBaseEvent {
         logger.error(e)
       })
     }
+  }
+  // 关闭推送
+  pushClientClose (headers, body, res) {
+  }
+  // 打开推送
+  pushClientOpen (headers, body, res) {
+  }
+  // 打开推送ping
+  pushClientPing (headers, body, res) {
   }
   // 代理访问api服务器
   apiModelProxy (res) {
