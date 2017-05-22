@@ -62,6 +62,7 @@ class PushEvent extends PushBaseEvent {
     if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
       return
     }
+    console.log(requestId)
   }
   // 打开推送
   pushOpen (headers, body, res) {
@@ -88,6 +89,7 @@ class PushEvent extends PushBaseEvent {
   }
   pushPing (headers, body, res) {
     var opt = Object.create(null)
+    var bodyObj, req
 
     if (!this.pingDataOptSign) {
       this.getPingData(headers, body, res)
@@ -137,8 +139,6 @@ class PushEvent extends PushBaseEvent {
         opt.headers.Authorization = res.headers.authorization
       }
 
-      var bodyObj, req
-      console.log(opt)
       req = (opt.protocol === 'https:' ? https : http).request(opt, response => {
         bodyObj = new Buffer(0)
         // 接收数据
@@ -148,8 +148,8 @@ class PushEvent extends PushBaseEvent {
           // 接收结束
         }).on('end', function () {
           return new Promise(function (resolve, reject) {
-            console.log('签名结果', bodyObj.toString())
             resolve()
+            console.log('签名结果', bodyObj.toString())
           })
         })
       })
