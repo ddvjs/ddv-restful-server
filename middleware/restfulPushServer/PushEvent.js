@@ -7,11 +7,18 @@ const PushBaseEvent = require('./PushBaseEvent.js')
 const apiModelProxy = require('./apiModelProxy.js')
 const ddvRowraw = require('ddv-rowraw')
 const logger = require('../../lib/logger.js')
+const crypto = require('crypto')
+const querystring = require('querystring')
+const url = require('url')
+
+const reg = /\-/g
+
 class PushEvent extends PushBaseEvent {
   constructor (options, ws, req) {
     super(options, ws, req)
     // 如果队列没有这个对象就加入这个对象
     wsConnQueue[this.connId] = wsConnQueue[this.connId] || this
+    this.setConfigInfo()
     this.pushEventInit()
   }
   pushEventInit () {
@@ -23,6 +30,15 @@ class PushEvent extends PushBaseEvent {
     this.on(['push', 'ping', '/v1_0/init'], this.pushPingHeartbeat.bind(this))
     this.on(['push', 'close', '/v1_0/init'], this.pushClose.bind(this))
     this.on(['push', 'open', '/v1_0/init'], this.pushOpen.bind(this))
+  }
+  // 设置配置信息
+  setConfigInfo () {
+    // 解析url
+    let urlObj = url.parse(this.options.rpcEvent.api_url)
+    this.options.apiUrlOpt = Object.create(null)
+    this.options.apiUrlOpt.protocol = urlObj.protocol
+    this.options.apiUrlOpt.host = urlObj.hostname
+    this.options.apiUrlOpt.port = urlObj.port
   }
   // 推送类型的信息
   onMessagePush (res) {
@@ -50,6 +66,7 @@ class PushEvent extends PushBaseEvent {
   // 打开推送
   pushOpen (headers, body, res) {
     var headersObj = Object.create(null)
+    var opt = Object.create(null)
 
     if (this.ws.readyState !== WebSocket.OPEN) {
       logger.error(new Error(`${this.gwcid}Has been closed, on pushOpen`))
@@ -65,6 +82,86 @@ class PushEvent extends PushBaseEvent {
     if (!(res.headers && headersObj.requestId)) {
       return
     }
+
+    if (!this.pingDataOptSign) {
+      this.getPingData(headers, body, res)
+    }
+    Object.assign(opt, this.pingDataOptSign)
+    // 生成唯一请求id
+    opt.request_id = workerUtil.createRequestId()
+    // 获取onOpen地址
+    opt.path = this.options.rpcEvent.on_open
+
+    this.request(opt, (res.headers.bodytype === 'buffer' ? (new Buffer(0)) : ''), 'PING /v1_0/sign PUSH/1.0')
+    .then(res => {
+      let pingDataHKey = Object.keys(this.pingDataH || [])
+      console.log(res.headers)
+
+      pingDataHKey.forEach((key, index) => {
+        console.log(key)
+        let loWkey = key.toLowerCase().replace(reg, '_')
+        if (res.headers[loWkey] === this.pingDataH[key]) {
+          delete res.headers[loWkey]
+        } else {
+          logger.error(new Error(`headers sign fail, ${key}, ${res.headers[key]}, ${res.headers}`))
+          return false
+        }
+        loWkey = void 0
+      })
+      // 撮合发送协议 端口 主机 信息
+      Object.assign(opt, this.options.apiUrlOpt)
+      // 判断是否已经修改了发过去的请求id
+      if (res.headers.request_id !== opt.request_id) {
+        logger.error(new Error('request_id sign fail'))
+      }
+    })
+    .catch(e => {
+      logger.error('Signature failed')
+    })
+  }
+  getPingData (headers, body, res) {
+    // 上线时间-是第一次连接push-open的时间戳
+    this.pushTimeOnLine = this.pushTimeOnLine || workerUtil.time()
+    // 构建发送php的参数对象
+    this.pingData = Object.create(null)
+    // 连接唯一识别gwcid
+    this.pingData.gwcid = this.gwcid
+    // 本推送服务器的 guid
+    this.pingData.serverGuid = this.serverGuid
+    // 长连接连接类型
+    this.pingData.bodyType = res.headers.bodytype
+    // 第一次上线时间
+    this.pingData.timeOnline = this.pushTimeOnLine
+    // 把参数序列化转为buffer缓存区数据
+    this.pingDataRaw = new Buffer(querystring.stringify(this.pingData), 'utf-8')
+    // 计算得出发送php的数据的二进制md5的base64
+    this.pingDataMd5Base64 = crypto.createHash('md5').update(this.pingDataRaw).digest('base64')
+    // 通知php的基本头
+    this.pingDataH = Object.create(null)
+    // 内容md5
+    this.pingDataH['Content-Md5'] = this.pingDataMd5Base64
+    // 内容长度
+    this.pingDataH['Content-Length'] = this.pingDataRaw.length
+    // 以这个协议进行编码
+    this.pingDataH['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+    // 解析url
+    let urlObj = url.parse(this.options.rpcEvent.api_url)
+    // 构造请求对象
+    this.pingDataOpt = Object.create(null)
+    // 获取php-传输协议 http:/https:
+    this.pingDataOpt.protocol = urlObj.protocol
+    // 获取php-host主机
+    this.pingDataOpt.host = urlObj.hostname
+    // 获取php-端口
+    this.pingDataOpt.port = urlObj.port
+    // 这个对象用于发送前端，给前端签名
+    this.pingDataOptSign = Object.create(null)
+    // put 协议
+    this.pingDataOptSign.method = 'PUT'
+    // 头
+    this.pingDataOptSign.headers = JSON.stringify(this.pingDataH)
+
+    headers = res = body = void 0
   }
   // 打开推送ping
   pushPingHeartbeat (headers, body, res) {

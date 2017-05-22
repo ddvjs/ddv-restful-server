@@ -32,9 +32,11 @@
   "directories": {},
   "dependencies": {
     "chalk": "~1.1.3",
+    "crypto": "~0.0.3",
     "lodash": "~4.17.4",
     "ddv-rowraw": "~0.0.6",
-    "ddv-worker-express-ws": "~0.0.1"
+    "ddv-worker-express-ws": "~0.0.1",
+    "querystring": "~0.2.0"
   },
   "devDependencies": {
     "babel-eslint": "^7.0.1",
