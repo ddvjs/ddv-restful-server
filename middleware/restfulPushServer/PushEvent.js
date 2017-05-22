@@ -10,7 +10,8 @@ const logger = require('../../lib/logger.js')
 const crypto = require('crypto')
 const querystring = require('querystring')
 const url = require('url')
-
+const http = require('http')
+const https = require('https')
 const reg = /\-/g
 
 class PushEvent extends PushBaseEvent {
@@ -57,23 +58,21 @@ class PushEvent extends PushBaseEvent {
       logger.error(new Error(`${this.gwcid}Has been closed, on pushClose`))
       return
     }
-    requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid
 
-    if (!(res.headers && requestId)) {
+    if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
       return
     }
   }
   // 打开推送
   pushOpen (headers, body, res) {
     var headersObj = Object.create(null)
-    var opt = Object.create(null)
 
     if (this.ws.readyState !== WebSocket.OPEN) {
       logger.error(new Error(`${this.gwcid}Has been closed, on pushOpen`))
       return
     }
     // 请求id
-    headersObj.requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid
+    headersObj.requestId = res.headers && (res.headers.request_id || res.headers.requestId || res.headers.requestid)
     // 全局链接id
     headersObj.gwcid = this.gwcid
     // 服务器唯一识别号
@@ -82,6 +81,13 @@ class PushEvent extends PushBaseEvent {
     if (!(res.headers && headersObj.requestId)) {
       return
     }
+    this.pushPing(headers, body, res)
+    .then(() => {
+      console.log('fuck')
+    })
+  }
+  pushPing (headers, body, res) {
+    var opt = Object.create(null)
 
     if (!this.pingDataOptSign) {
       this.getPingData(headers, body, res)
@@ -92,18 +98,21 @@ class PushEvent extends PushBaseEvent {
     // 获取onOpen地址
     opt.path = this.options.rpcEvent.on_open
 
-    this.request(opt, (res.headers.bodytype === 'buffer' ? (new Buffer(0)) : ''), 'PING /v1_0/sign PUSH/1.0')
+    return this.request(opt, (res.headers.bodytype === 'buffer' ? (new Buffer(0)) : ''), 'PING /v1_0/sign PUSH/1.0')
     .then(res => {
       let pingDataHKey = Object.keys(this.pingDataH || [])
-      console.log(res.headers)
 
       pingDataHKey.forEach((key, index) => {
-        console.log(key)
         let loWkey = key.toLowerCase().replace(reg, '_')
+
+        if (this.pingDataH[key]) {
+          this.pingDataH[key] = this.pingDataH[key].toString()
+        }
+
         if (res.headers[loWkey] === this.pingDataH[key]) {
           delete res.headers[loWkey]
         } else {
-          logger.error(new Error(`headers sign fail, ${key}, ${res.headers[key]}, ${res.headers}`))
+          logger.error(new Error(`headers sign fail, ${key}, ${res.headers[loWkey]}, ${res.headers}`))
           return false
         }
         loWkey = void 0
@@ -113,7 +122,42 @@ class PushEvent extends PushBaseEvent {
       // 判断是否已经修改了发过去的请求id
       if (res.headers.request_id !== opt.request_id) {
         logger.error(new Error('request_id sign fail'))
+        return false
+      } else if (res.headers.host !== opt.host) {
+        logger.error(new Error('host sign fail'))
+        return false
+      } else {
+        // 请求php的头 空对象
+        opt.headers = Object.create(null)
+        // 撮合一下
+        Object.assign(opt.headers, this.pingDataH)
+        // host 首字母大写
+        opt.headers.Host = opt.host
+        // Authorization 首字母大写
+        opt.headers.Authorization = res.headers.authorization
       }
+
+      var bodyObj, req
+      console.log(opt)
+      req = (opt.protocol === 'https:' ? https : http).request(opt, response => {
+        bodyObj = new Buffer(0)
+        // 接收数据
+        response.on('data', (data) => {
+          bodyObj = Buffer.concat([bodyObj, data])
+          data = undefined
+          // 接收结束
+        }).on('end', function () {
+          return new Promise(function (resolve, reject) {
+            console.log('签名结果', bodyObj.toString())
+            resolve()
+          })
+        })
+      })
+      // 写入发送的数据
+      req.write(this.pingDataRaw)
+      // 结束请求数据的发送
+      req.end()
+      req = undefined
     })
     .catch(e => {
       logger.error('Signature failed')
