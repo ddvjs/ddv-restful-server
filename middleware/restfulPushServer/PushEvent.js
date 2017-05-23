@@ -84,7 +84,7 @@ class PushEvent extends PushBaseEvent {
     }
     this.pushPing(headers, body, res)
     .then(() => {
-      console.log('fuck')
+      console.log('签名结束')
     })
   }
   pushPing (headers, body, res) {

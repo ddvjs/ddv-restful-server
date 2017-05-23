@@ -40,9 +40,11 @@ class RpcBaseEvent extends EventEmitter {
     }
 
     switch ((res.type || '')) {
+      // ping
       case 'ping':
         this.ping(res)
         break
+      // 远程调用
       case 'rpc_call':
         this.rpcCallRun(res)
         .catch(e => {
@@ -56,13 +58,14 @@ class RpcBaseEvent extends EventEmitter {
           this.send(JSON.stringify(res))
         })
         break
+      // 未知类型
       default:
         logger.log(`rpc收到未知信息: ${message}`)
     }
   }
   onClose (e) {}
   rpcCallRun (res) {
-    var {wcids, path} = res.data
+    var {wcids, path, body} = res.data
 
     if (typeof res.data !== 'object') {
       return Promise.reject(new RpcError('Data is illegal, data is not a valid object', 'DATA_VALID_OBJECT'))
@@ -83,7 +86,7 @@ class RpcBaseEvent extends EventEmitter {
     if (wcids.length < 0) {
       return Promise.reject(new RpcError('Rpc gwcidTimeStamp and call gwcidTimeStamp inconsistent', 'GWCID_TIMESTAMP_ERROR'))
     }
-    return this.rpcCall(path, wcids)
+    return this.rpcCall(path, wcids, body)
   }
   ping (res) {
     var r
