@@ -37,7 +37,7 @@ class RpcBaseServer extends EventEmitter {
     xRpcLen = xRpc.length || 0
     // 获取rpc调用头
     for (let key in this.req.headers) {
-      if (Object.hasOwnProperty.call(this.req.headers, key)) {
+      if (!Object.hasOwnProperty.call(this.req.headers, key)) {
         continue
       }
       let keyStr = key.toString()
