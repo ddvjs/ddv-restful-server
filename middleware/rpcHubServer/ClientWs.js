@@ -85,7 +85,6 @@ class ClientWs extends MessageEventEmitter {
     }
     let url = this.options.rpcDomainSuffix[0] || 'ws://127.0.0.1/v1_0/rpc'
     url = url.replace('{{$guid}}', this.guid || '')
-    url = 'ws://10.8.8.23:2266/v1_0/rpc'
     console.log('-客户端GUID：' + this.guid, url)
     return Promise.resolve(url)
   }
