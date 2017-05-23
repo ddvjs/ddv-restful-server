@@ -70,8 +70,11 @@ class PushEvent extends PushBaseEvent {
       return
     }
     this.pushPing(headers, body, res)
-    .then(() => {
-      console.log('签名结束')
+    .then((res) => {
+      console.log('签名结束', res)
+    })
+    .catch(e => {
+      console.log('签名失败', e)
     })
   }
   pushPing (headers, body, res) {
@@ -89,69 +92,78 @@ class PushEvent extends PushBaseEvent {
 
     return this.request(opt, (res.headers.bodytype === 'buffer' ? (new Buffer(0)) : ''), 'PING /v1_0/sign PUSH/1.0')
     .then(res => {
-      let pingDataHKey = Object.keys(this.pingDataH || [])
+      return new Promise((resolve, reject) => {
+        let pingDataHKey = Object.keys(this.pingDataH || [])
 
-      pingDataHKey.forEach((key, index) => {
-        let lowkey = key.toLowerCase().replace(regular, '_')
+        pingDataHKey.forEach((key, index) => {
+          let lowkey = key.toLowerCase().replace(regular, '_')
 
-        if (typeof this.pingDataH[key] === 'number') {
-          this.pingDataH[key] = this.pingDataH[key].toString()
-        }
+          if (typeof this.pingDataH[key] === 'number') {
+            this.pingDataH[key] = this.pingDataH[key].toString()
+          }
 
-        if (typeof res.headers[lowkey] === 'number') {
-          res.headers[lowkey] = res.headers[lowkey].toString()
-        }
+          if (typeof res.headers[lowkey] === 'number') {
+            res.headers[lowkey] = res.headers[lowkey].toString()
+          }
 
-        if (res.headers[lowkey] === this.pingDataH[key]) {
-          delete res.headers[lowkey]
+          if (res.headers[lowkey] === this.pingDataH[key]) {
+            delete res.headers[lowkey]
+          } else {
+            logger.error(new Error(`headers sign fail, ${key}, ${res.headers[lowkey]}, ${res.headers}`))
+            return false
+          }
+          lowkey = void 0
+        })
+        // 撮合发送协议 端口 主机 信息
+        Object.assign(opt, this.options.apiUrlOpt)
+        // 判断是否已经修改了发过去的请求id
+        if (res.headers.request_id !== opt.request_id) {
+          logger.error(new Error('request_id sign fail'))
+          reject(new Error('request_id sign fail'))
+        } else if (res.headers.host !== opt.host) {
+          logger.error(new Error('host sign fail'))
+          reject(new Error('host sign fail'))
         } else {
-          logger.error(new Error(`headers sign fail, ${key}, ${res.headers[lowkey]}, ${res.headers}`))
-          return false
+          // 请求php的头 空对象
+          opt.headers = Object.create(null)
+          // 撮合一下
+          Object.assign(opt.headers, this.pingDataH)
+          // host 首字母大写
+          opt.headers.Host = opt.host
+          // Authorization 首字母大写
+          opt.headers.Authorization = res.headers.authorization
         }
-        lowkey = void 0
-      })
-      // 撮合发送协议 端口 主机 信息
-      Object.assign(opt, this.options.apiUrlOpt)
-      // 判断是否已经修改了发过去的请求id
-      if (res.headers.request_id !== opt.request_id) {
-        logger.error(new Error('request_id sign fail'))
-        return false
-      } else if (res.headers.host !== opt.host) {
-        logger.error(new Error('host sign fail'))
-        return false
-      } else {
-        // 请求php的头 空对象
-        opt.headers = Object.create(null)
-        // 撮合一下
-        Object.assign(opt.headers, this.pingDataH)
-        // host 首字母大写
-        opt.headers.Host = opt.host
-        // Authorization 首字母大写
-        opt.headers.Authorization = res.headers.authorization
-      }
 
-      req = (opt.protocol === 'https:' ? https : http).request(opt, response => {
-        bodyObj = new Buffer(0)
-        // 接收数据
-        response.on('data', (data) => {
-          bodyObj = Buffer.concat([bodyObj, data])
-          data = undefined
-          // 接收结束
-        }).on('end', function () {
-          return new Promise(function (resolve, reject) {
-            resolve()
+        req = (opt.protocol === 'https:' ? https : http).request(opt, response => {
+          bodyObj = new Buffer(0)
+          // 接收数据
+          response.on('data', (data) => {
+            bodyObj = Buffer.concat([bodyObj, data])
+            data = undefined
+            // 接收结束
+          }).on('end', function () {
+            let obj = {
+              headers,
+              body,
+              res
+            }
+            resolve(obj)
             console.log('签名结果', bodyObj.toString())
           })
         })
+        // 写入发送的数据
+        req.write(this.pingDataRaw)
+        // 结束请求数据的发送
+        req.end()
+        req = undefined
       })
-      // 写入发送的数据
-      req.write(this.pingDataRaw)
-      // 结束请求数据的发送
-      req.end()
-      req = undefined
     })
     .catch(e => {
       logger.error('Signature failed')
+      logger.error(e)
+      return new Promise((resolve, reject) => {
+        reject(new Error('Signature failed'))
+      })
     })
   }
   getPingData (headers, body, res) {
