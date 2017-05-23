@@ -15,5 +15,6 @@ function getClientWs (guid, options) {
   client.on('close', () => {
     delete clientWsQueue[guid]
   })
-  client = void 0
+  client = options = void 0
+  return Promise.resolve(clientWsQueue[guid])
 }
