@@ -2,11 +2,11 @@
 
 const workerUtil = require('ddv-worker/util')
 const ddvRowraw = require('ddv-rowraw')
-const EventEmitter = require('events')
 const WebSocket = require('ws')
 const logger = require('../../lib/logger.js')
+const MessageEventEmitter = require('../../lib/MessageEventEmitter.js')
 
-class ClientWs extends EventEmitter {
+class ClientWs extends MessageEventEmitter {
   constructor (guid, options) {
     super()
     this.baseInit(guid, options)
@@ -21,7 +21,7 @@ class ClientWs extends EventEmitter {
   getWs () {
     var isConnWs = false
     if (this.ws) {
-      if (this.ws.readyState === WebSocket.OPEN) {
+      if (this.isWsOpen()) {
         return Promise.resolve(this.ws)
       } else if (this.ws.readyState !== WebSocket.CONNECTING) {
         isConnWs = true

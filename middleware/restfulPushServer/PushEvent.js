@@ -2,7 +2,6 @@
 const wsConnQueue = require('./wsConnQueue.js')
 const worker = require('ddv-worker')
 const workerUtil = require('ddv-worker/util')
-const WebSocket = require('ws')
 const PushBaseEvent = require('./PushBaseEvent.js')
 const apiModelProxy = require('./apiModelProxy.js')
 const ddvRowraw = require('ddv-rowraw')
@@ -54,7 +53,7 @@ class PushEvent extends PushBaseEvent {
   // 关闭推送
   pushClose (headers, body, res) {
     var requestId
-    if (this.ws.readyState !== WebSocket.OPEN) {
+    if (this.isWsOpen()) {
       logger.error(new Error(`${this.gwcid}Has been closed, on pushClose`))
       return
     }
@@ -68,7 +67,7 @@ class PushEvent extends PushBaseEvent {
   pushOpen (headers, body, res) {
     var headersObj = Object.create(null)
 
-    if (this.ws.readyState !== WebSocket.OPEN) {
+    if (this.isWsOpen()) {
       logger.error(new Error(`${this.gwcid}Has been closed, on pushOpen`))
       return
     }
@@ -214,7 +213,7 @@ class PushEvent extends PushBaseEvent {
   // 打开推送ping
   pushPingHeartbeat (headers, body, res) {
     var requestId
-    if (this.ws.readyState !== WebSocket.OPEN) {
+    if (this.isWsOpen()) {
       logger.error(new Error(`${this.gwcid}Has been closed, on pushPingHeartbeat`))
       return
     }
@@ -241,7 +240,7 @@ class PushEvent extends PushBaseEvent {
   // 代理访问api服务器
   onApiModelProxy (res) {
     var requestId, body
-    if (this.ws.readyState !== WebSocket.OPEN) {
+    if (this.isWsOpen()) {
       logger.error(new Error(`${this.gwcid}Has been closed, on onApiModelProxy`))
       return
     }
@@ -284,7 +283,7 @@ class PushEvent extends PushBaseEvent {
   }
   // 发送信息个用户，信息来源rpc
   sendMsgToUser (headers, body) {
-    if (this.ws.readyState !== WebSocket.OPEN) {
+    if (this.isWsOpen()) {
       let e = new Error(`${this.gwcid}Has been closed, on sendMsgToUser`)
       e.errorId = 'HAS_BEEN_CLOSED'
       logger.error(e)
