@@ -23,6 +23,9 @@ class RpcCall extends RpcBaseServer {
       .then(res => {
         console.log('resdfsfsdfsfss', res)
       })
+      .catch(res => {
+        console.log('resdfsfsdfsfss', res)
+      })
     })
   }
 }

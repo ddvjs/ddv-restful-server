@@ -1,7 +1,5 @@
 'use strict'
 
-const workerUtil = require('ddv-worker/util')
-const ddvRowraw = require('ddv-rowraw')
 const WebSocket = require('ws')
 const logger = require('../../lib/logger.js')
 const MessageEventEmitter = require('../../lib/MessageEventEmitter.js')
@@ -10,6 +8,7 @@ class ClientWs extends MessageEventEmitter {
   constructor (guid, options) {
     super(guid)
     this.baseInit(guid, options)
+    this.clientWsEventInit()
   }
   baseInit (guid, options) {
     this.guid = guid
@@ -17,6 +16,9 @@ class ClientWs extends MessageEventEmitter {
     this.processRequest = Object.create(null)
     this.ws = null
     this.url = null
+  }
+  clientWsEventInit (guid, options) {
+    this.on('ws::message', this.onMessage.bind(this))
   }
   getWs () {
     var isConnWs = false
@@ -75,21 +77,6 @@ class ClientWs extends MessageEventEmitter {
       console.log(4424)
       ws.send(raw)
       console.log(444)
-    })
-  }
-  // 处理请求
-  request (headers, body, start) {
-    var requestId
-    requestId = headers.request_id = headers.request_id || workerUtil.createRequestId()
-    return ddvRowraw.stringifyPromise(headers, body, start)
-    .then(raw => this.send(raw))
-    .then(() => {
-      headers = body = start = void 0
-      this.processRequest = this.processRequest || Object.create(null)
-      return new Promise((resolve, reject) => {
-        this.processRequest[requestId] = [resolve, reject, new Date()]
-        requestId = void 0
-      })
     })
   }
   getClientUrl () {
