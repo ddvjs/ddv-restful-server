@@ -1,9 +1,8 @@
 'use strict'
+const RpcEvent = require('./RpcEvent.js')
+const wsConnQueue = require('./wsConnQueue.js')
 module.exports = function rpcServerMiddleware (options) {
   return function rpcServer (ws, req) {
-    ws.on('message', function (msg) {
-      console.log(msg, 'test')
-      ws.send('rpcServer' + msg + 'test')
-    })
+    wsConnQueue[req.requestId] = new RpcEvent(options, ws, req)
   }
 }

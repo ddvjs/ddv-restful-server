@@ -12,7 +12,7 @@ const querystring = require('querystring')
 const url = require('url')
 const http = require('http')
 const https = require('https')
-const reg = /\-/g
+const regular = /\-/g
 
 class PushEvent extends PushBaseEvent {
   constructor (options, ws, req) {
@@ -105,19 +105,23 @@ class PushEvent extends PushBaseEvent {
       let pingDataHKey = Object.keys(this.pingDataH || [])
 
       pingDataHKey.forEach((key, index) => {
-        let loWkey = key.toLowerCase().replace(reg, '_')
+        let lowkey = key.toLowerCase().replace(regular, '_')
 
-        if (this.pingDataH[key]) {
+        if (typeof this.pingDataH[key] === 'number') {
           this.pingDataH[key] = this.pingDataH[key].toString()
         }
 
-        if (res.headers[loWkey] === this.pingDataH[key]) {
-          delete res.headers[loWkey]
+        if (typeof res.headers[lowkey] === 'number') {
+          res.headers[lowkey] = res.headers[lowkey].toString()
+        }
+
+        if (res.headers[lowkey] === this.pingDataH[key]) {
+          delete res.headers[lowkey]
         } else {
-          logger.error(new Error(`headers sign fail, ${key}, ${res.headers[loWkey]}, ${res.headers}`))
+          logger.error(new Error(`headers sign fail, ${key}, ${res.headers[lowkey]}, ${res.headers}`))
           return false
         }
-        loWkey = void 0
+        lowkey = void 0
       })
       // 撮合发送协议 端口 主机 信息
       Object.assign(opt, this.options.apiUrlOpt)
