@@ -24,8 +24,6 @@ class PushEvent extends PushBaseEvent {
   pushEventInit () {
     this.ws.on('close', this.onWsConnQueueClose.bind(this))
     // 获取文件事件
-    this.on('protocol::push', this.onMessagePush.bind(this))
-    // 获取文件事件
     this.on('protocol::apimodelproxy', this.onApiModelProxy.bind(this))
     this.on(['push', 'ping', '/v1_0/init'], this.pushPingHeartbeat.bind(this))
     this.on(['push', 'close', '/v1_0/init'], this.pushClose.bind(this))
@@ -39,16 +37,6 @@ class PushEvent extends PushBaseEvent {
     this.options.apiUrlOpt.protocol = urlObj.protocol
     this.options.apiUrlOpt.host = urlObj.hostname
     this.options.apiUrlOpt.port = urlObj.port
-  }
-  // 推送类型的信息
-  onMessagePush (res) {
-    if (!(res.method && res.path && this.emit(['push', res.method.toLowerCase(), res.path], res.headers, res.body, res))) {
-      this.send(`Push request not found, not find method:${res.method}`)
-      .catch(e => {
-        logger.error(`[gwcid:${this.gwcid}]onMessagePush error`)
-        logger.error(e)
-      })
-    }
   }
   // 关闭推送
   pushClose (headers, body, res) {

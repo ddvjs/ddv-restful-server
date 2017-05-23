@@ -4,7 +4,7 @@ const logger = require('../../lib/logger.js')
 const MessageEventEmitter = require('../../lib/MessageEventEmitter.js')
 class RpcBaseEvent extends MessageEventEmitter {
   constructor (options, ws, req) {
-    super()
+    super(req)
     this.baseInit(options, ws, req)
     this.wsEventBaseInit()
   }
@@ -23,6 +23,18 @@ class RpcBaseEvent extends MessageEventEmitter {
   wsEventBaseInit () {
     this.ws.on('message', this.onMessage.bind(this))
     this.ws.on('close', this.onClose.bind(this))
+    // 获取文件事件
+    this.on('protocol::rpc', this.onMessageRpc.bind(this))
+  }
+  // 推送类型的信息
+  onMessageRpc (res) {
+    if (!(res.method && res.path && this.emit(['rpc', res.method.toLowerCase(), res.path], res.headers, res.body, res))) {
+      logger.error(`[gwcid:${this.gwcid}]onMessageRpc error`)
+      this.send(`Rpc request not found, not find method:${res.method}`)
+      .catch(e => {
+        logger.error(e)
+      })
+    }
   }
   onClose (e) {}
   rpcCallRun (res) {

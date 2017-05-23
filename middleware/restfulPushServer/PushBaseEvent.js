@@ -3,7 +3,7 @@ const logger = require('../../lib/logger.js')
 const MessageEventEmitter = require('../../lib/MessageEventEmitter.js')
 class PushBaseEvent extends MessageEventEmitter {
   constructor (options, ws, req) {
-    super()
+    super(req)
     this.baseInit(options, ws, req)
     this.wsEventBaseInit()
   }
@@ -23,6 +23,18 @@ class PushBaseEvent extends MessageEventEmitter {
   wsEventBaseInit () {
     this.ws.on('message', this.onMessage.bind(this))
     this.ws.on('close', this.onClose.bind(this))
+    // 获取文件事件
+    this.on('protocol::push', this.onMessagePush.bind(this))
+  }
+  // 推送类型的信息
+  onMessagePush (res) {
+    if (!(res.method && res.path && this.emit(['push', res.method.toLowerCase(), res.path], res.headers, res.body, res))) {
+      logger.error(`[gwcid:${this.gwcid}]onMessagePush error`)
+      this.send(`Push request not found, not find method:${res.method}`)
+      .catch(e => {
+        logger.error(e)
+      })
+    }
   }
   // 收到消息的时候
   onClose () {
