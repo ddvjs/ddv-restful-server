@@ -8,7 +8,7 @@ const MessageEventEmitter = require('../../lib/MessageEventEmitter.js')
 
 class ClientWs extends MessageEventEmitter {
   constructor (guid, options) {
-    super()
+    super(guid)
     this.baseInit(guid, options)
   }
   baseInit (guid, options) {
