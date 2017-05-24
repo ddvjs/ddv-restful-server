@@ -9,7 +9,7 @@ class RpcEvent extends RpcBaseEvent {
     this.init()
   }
   init () {
-    
+
   }
   rpcCall (path, wcids, body) {
     return new Promise(function (resolve, reject) {
