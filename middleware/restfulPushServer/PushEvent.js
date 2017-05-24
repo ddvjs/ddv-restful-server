@@ -49,13 +49,14 @@ class PushEvent extends PushBaseEvent {
     if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
       return
     }
+    this.isPushOpened = false
     console.log(requestId)
   }
   // 打开推送
   pushOpen (headers, body, res) {
     var headersObj = Object.create(null)
-    var statR
-    var rawR
+    var statR = ''
+    var rawR = ''
 
     if (!this.isWsOpen()) {
       logger.error(new PushError(`${this.gwcid}Has been closed, on pushOpen`, 'HAS_BEEN_CLOSED'))
@@ -77,7 +78,7 @@ class PushEvent extends PushBaseEvent {
 
     if (this.isPushOpening) {
       rawR = new Buffer(0)
-      ddvRowraw.stringifyPromise(
+      return ddvRowraw.stringifyPromise(
         {
           request_id: headersObj.requestId
         },
@@ -98,9 +99,9 @@ class PushEvent extends PushBaseEvent {
         })
       })
     }
-
     // 标记正在打开推送系统
     this.isPushOpening = true
+
     if (this.isPushOpened) {
       statR = 'PUSH/1.0 201 PUSH_BEEN_OPENED'
     } else {
@@ -108,8 +109,8 @@ class PushEvent extends PushBaseEvent {
 
       this.pushTimeOnLine = workerUtil.time()
       // 判断并储存数据传输的方式
-      if (headers.bodytype && ['string', 'buffer'].indexOf(headers.bodytype) > -1) {
-        this.bodytype = headers.bodytype
+      if (res.headers.bodytype && ['string', 'buffer'].indexOf(res.headers.bodytype) > -1) {
+        this.bodytype = res.headers.bodytype
       } else {
         // 使用自动模式
         this.bodytype = 'auto'
@@ -119,10 +120,44 @@ class PushEvent extends PushBaseEvent {
     if (isBuffer) {
       rawR = new Buffer(0)
     }
+
+    if (this.isPushOpened) {
+      ddvRowraw.stringifyPromise(
+        {
+          request_id: headersObj.requestId
+        },
+        rawR,
+        statR
+      )
+      .then(raw => this.send(raw))
+      .catch(e => {
+        logger.error(new PushError('error'))
+        logger.error(new PushError(e))
+      })
+
+      headersObj = statR = rawR = void 0
+    } else {
+      this.pushPing(headers, body, res)
+      .then(res => {
+        this.isPushOpened = true
+        ddvRowraw.stringifyPromise(
+          {
+            request_id: headersObj.requestId
+          },
+          rawR,
+          statR
+        )
+        .then(raw => this.send(raw))
+        .catch(e => {
+          logger.error(new PushError('error'))
+          logger.error(new PushError(e))
+        })
+        headersObj = statR = rawR = void 0
+      })
+    }
   }
   pushPing (headers, body, res) {
     var opt = Object.create(null)
-    var bodyObj, req
 
     if (!this.pingDataOptSign) {
       this.getPingData(headers, body, res)
