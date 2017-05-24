@@ -55,6 +55,8 @@ class PushEvent extends PushBaseEvent {
   // 打开推送
   pushOpen (headers, body, res) {
     var headersObj = Object.create(null)
+    var statR
+    var rawR
 
     if (!this.isWsOpen()) {
       logger.error(new PushError(`${this.gwcid}Has been closed, on pushOpen`, 'HAS_BEEN_CLOSED'))
@@ -75,6 +77,7 @@ class PushEvent extends PushBaseEvent {
     }
 
     if (this.isPushOpening) {
+      rawR = new Buffer(0)
       ddvRowraw.stringifyPromise(
         {
           request_id: headersObj.requestId
@@ -95,6 +98,27 @@ class PushEvent extends PushBaseEvent {
           console.log('签名失败', e)
         })
       })
+    }
+
+    // 标记正在打开推送系统
+    this.isPushOpening = true
+    if (this.isPushOpened) {
+      statR = 'PUSH/1.0 201 PUSH_BEEN_OPENED'
+    } else {
+      statR = 'PUSH/1.0 200 OK'
+
+      this.pushTimeOnLine = workerUtil.time()
+      // 判断并储存数据传输的方式
+      if (headers.bodytype && ['string', 'buffer'].indexOf(headers.bodytype) > -1) {
+        this.bodytype = headers.bodytype
+      } else {
+        // 使用自动模式
+        this.bodytype = 'auto'
+      }
+    }
+    // 如果是使用Buffer模式就强转Buffer
+    if (isBuffer) {
+      rawR = new Buffer(0)
     }
   }
   pushPing (headers, body, res) {
