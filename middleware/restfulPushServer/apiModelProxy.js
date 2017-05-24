@@ -1,6 +1,5 @@
 'use strict'
-const https = require('https')
-const http = require('http')
+const request = require('../../lib/request')
 const PushError = require('./PushError')
 
 module.exports = apiModelProxy
@@ -13,33 +12,7 @@ function apiModelProxy (res, options) {
     .then(() => opt)
   })
   .then(opt => {
-    return new Promise((resolve, reject) => {
-      var req
-      var data = new Buffer(0)
-      req = (opt.protocol === 'https:' ? https : http).request(opt, response => {
-        // 接收数据
-        response.on('data', chunk => {
-          data = Buffer.concat([data, chunk])
-          chunk = void 0
-        })
-        // 接收结束
-        response.on('end', () => {
-          resolve({
-            headers: response.headers,
-            statusCode: response.statusCode,
-            statusMessage: response.statusMessage,
-            data
-          })
-        })
-      })
-      req.on('error', e => {
-        e.errorId = e.errorId || 'requestError'
-        reject(e)
-      })
-      req.write(res.body)
-      req.end()
-      req = undefined
-    })
+    return request(opt, opt.method, res.body)
   })
 }
 function getOpt (res) {

@@ -283,7 +283,7 @@ class PushEvent extends PushBaseEvent {
   }
   // 代理访问api服务器
   onApiModelProxy (res) {
-    var requestId, body
+    var requestId, resBody
     if (!this.isWsOpen()) {
       logger.error(new PushError(`${this.gwcid}Has been closed, on onApiModelProxy`, 'HAS_BEEN_CLOSED'))
       return
@@ -291,22 +291,22 @@ class PushEvent extends PushBaseEvent {
     if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
       return
     }
-    body = res.bodytype === 'buffer' ? Buffer(0) : ''
+    resBody = res.bodytype === 'buffer' ? Buffer(0) : ''
     // 试图请求
     apiModelProxy(res, this.options)
     // 有请求结果
-    .then(({headers, statusCode, statusMessage, data}) => {
-      if (Buffer.isBuffer(body)) {
-        body = Buffer.concat([body, data])
+    .then(({headers, statusCode, statusMessage, body}) => {
+      if (Buffer.isBuffer(resBody)) {
+        resBody = Buffer.concat([resBody, body])
       } else {
-        body += data
+        resBody += body
       }
-      data = void 0
+      body = void 0
       // 序列化流
       return ddvRowraw.stringifyPromise({
         'request_id': requestId,
         'headers': JSON.stringify(headers)
-      }, body, `APIMODELPROXY/1.0 ${statusCode || '0'} ${statusMessage || 'Unknow Error'}`)
+      }, resBody, `APIMODELPROXY/1.0 ${statusCode || '0'} ${statusMessage || 'Unknow Error'}`)
     })
     // 中途异常
     .catch(e => {
@@ -316,7 +316,7 @@ class PushEvent extends PushBaseEvent {
         'headers': '{}',
         'msg': e.message,
         'message': e.message
-      }, body, `APIMODELPROXY/1.0 400 ${e.errorId || 'Unknow Error'}`)
+      }, resBody, `APIMODELPROXY/1.0 400 ${e.errorId || 'Unknow Error'}`)
     })
     .then(raw => this.send(raw))
     // 发送异常回去还是有异常打印日志
