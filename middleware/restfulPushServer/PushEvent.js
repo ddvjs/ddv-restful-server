@@ -10,8 +10,6 @@ const logger = require('../../lib/logger.js')
 const crypto = require('crypto')
 const querystring = require('querystring')
 const url = require('url')
-const http = require('http')
-const https = require('https')
 const PushError = require('./PushError')
 const regular = /\-/g
 
