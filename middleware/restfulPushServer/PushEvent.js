@@ -85,10 +85,7 @@ class PushEvent extends PushBaseEvent {
         (isBuffer ? new Buffer(0) : ''),
         'PUSH/1.0 202 PUSH_OPENING'
       )
-      .then(raw => {
-        console.log(123123131)
-        this.send(raw)
-      })
+      .then(raw => this.send(raw))
       .catch(e => {
         this.pushPing(headers, body, res)
         .then((res) => {
