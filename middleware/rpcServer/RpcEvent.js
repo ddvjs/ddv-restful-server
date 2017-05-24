@@ -4,12 +4,12 @@ const RpcBaseEvent = require('./RpcBaseEvent.js')
 const ddvRowraw = require('ddv-rowraw')
 
 class RpcEvent extends RpcBaseEvent {
-  constructor (options, ws, req) {
+  constructor (options, rpcCall, ws, req) {
     super(options, ws, req)
-    this.init()
+    this.rpcCallInit(rpcCall)
   }
-  init () {
-
+  rpcCallInit (rpcCall) {
+    this.rpcCall = rpcCall
   }
   rpcCall (path, wcids, body) {
     return new Promise(function (resolve, reject) {
