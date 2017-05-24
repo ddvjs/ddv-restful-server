@@ -19,7 +19,7 @@ class ClientWs extends MessageEventEmitter {
     this.ws = null
     this.url = null
     this.wsTryNum = 0
-    this.wsTrySum = 0
+    this.wsTrySum = parseInt(this.options.wsTrySum) || 0
     this.wsTryLastTime = 0
     this.wsTryIntervalTime = 3 * 1000
   }
@@ -30,6 +30,8 @@ class ClientWs extends MessageEventEmitter {
       rpcDomainSuffix = this.options.rpcDomainSuffix.shift()
       this.options.rpcDomainSuffix.push(rpcDomainSuffix)
       res = this.getClientUrl(true)
+    } else {
+      logger.error('请配置this.options.rpcDomainSuffix')
     }
     this.rpcDomainSuffix = rpcDomainSuffix || 'ws://127.0.0.1/v1_0/rpc'
     return res || this.getClientUrl()
