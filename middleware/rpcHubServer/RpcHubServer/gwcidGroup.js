@@ -4,7 +4,7 @@ const guidReg = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/
 const workerIdReg = /^\d+$/
 const connIdReg = /^[\da-z]+$/
 const timeStampReg = /^\d+$/
-const RpcHubError = require('./RpcHubError.js')
+const RpcHubError = require('../RpcHubError')
 function gwcidGroup (gwcidsInput) {
   var gwcids = []
   var gwcidsError = []

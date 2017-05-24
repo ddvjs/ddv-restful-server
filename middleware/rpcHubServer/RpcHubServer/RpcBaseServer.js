@@ -1,7 +1,7 @@
 'use strict'
 const EventEmitter = require('events')
-const logger = require('../../lib/logger.js')
-const RpcHubError = require('./RpcHubError.js')
+const logger = require('../../../lib/logger.js')
+const RpcHubError = require('../RpcHubError')
 const gwcidGroup = require('./gwcidGroup.js')
 class RpcBaseServer extends EventEmitter {
   constructor (options, req, res, next) {

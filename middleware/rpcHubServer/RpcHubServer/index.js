@@ -1,7 +1,7 @@
 'use strict'
 
 const RpcBaseServer = require('./RpcBaseServer.js')
-const getClientWs = require('./getClientWs.js')
+const rpcClient = require('../rpcClient')
 
 class RpcCall extends RpcBaseServer {
   constructor (options, req, res, next) {
@@ -11,7 +11,7 @@ class RpcCall extends RpcBaseServer {
   init () {
   }
   rpcCall (rpcId, guid, wcids, headers, body, path, timeStamp) {
-    return getClientWs(guid, this.options)
+    return rpcClient(guid, this.options)
     .then(client => {
       return client.request({
         rpc_id: rpcId,

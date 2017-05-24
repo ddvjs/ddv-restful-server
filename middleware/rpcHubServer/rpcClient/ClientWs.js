@@ -1,9 +1,9 @@
 'use strict'
 
 const WebSocket = require('ws')
-const logger = require('../../lib/logger.js')
+const logger = require('../../../lib/logger.js')
 const workerUtil = require('ddv-worker/util')
-const MessageEventEmitter = require('../../lib/MessageEventEmitter.js')
+const MessageEventEmitter = require('../../../lib/MessageEventEmitter.js')
 
 class ClientWs extends MessageEventEmitter {
   constructor (guid, options) {
@@ -22,19 +22,6 @@ class ClientWs extends MessageEventEmitter {
     this.wsTrySum = parseInt(this.options.wsTrySum) || 0
     this.wsTryLastTime = 0
     this.wsTryIntervalTime = 3 * 1000
-  }
-  rpcDomainSuffixInit () {
-    var rpcDomainSuffix, res
-    if (this.options && this.options.rpcDomainSuffix) {
-      this.wsTrySum = this.wsTrySum || this.options.rpcDomainSuffix.length || 3
-      rpcDomainSuffix = this.options.rpcDomainSuffix.shift()
-      this.options.rpcDomainSuffix.push(rpcDomainSuffix)
-      res = this.getClientUrl(true)
-    } else {
-      logger.error('请配置this.options.rpcDomainSuffix')
-    }
-    this.rpcDomainSuffix = rpcDomainSuffix || 'ws://127.0.0.1/v1_0/rpc'
-    return res || this.getClientUrl()
   }
   clientWsEventInit (guid, options) {
     this.on('ws::message', this.onMessage.bind(this))
@@ -146,6 +133,20 @@ class ClientWs extends MessageEventEmitter {
         })
       })
     })
+  }
+  rpcDomainSuffixInit () {
+    var rpcDomainSuffix, res
+    if (this.options && this.options.rpcDomainSuffix) {
+      this.wsTrySum = this.wsTrySum || this.options.rpcDomainSuffix.length || 3
+      rpcDomainSuffix = this.options.rpcDomainSuffix.shift()
+      this.options.rpcDomainSuffix.push(rpcDomainSuffix)
+      this.rpcDomainSuffix = rpcDomainSuffix
+      res = this.getClientUrl(true)
+    } else {
+      logger.error('请配置this.options.rpcDomainSuffix')
+    }
+    this.rpcDomainSuffix = this.rpcDomainSuffix || 'ws://127.0.0.1/v1_0/rpc'
+    return res || this.getClientUrl()
   }
   // 获取客户端地址
   getClientUrl (isReGet = false) {

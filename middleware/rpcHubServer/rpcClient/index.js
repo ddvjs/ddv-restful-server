@@ -1,5 +1,5 @@
 module.exports = getClientWs
-const RpcHubError = require('./RpcHubError.js')
+const RpcHubError = require('../RpcHubError')
 const clientWsQueue = require('./clientWsQueue.js')
 const ClientWs = require('./ClientWs.js')
 function getClientWs (guid, options) {
