@@ -147,7 +147,7 @@ class PushEvent extends PushBaseEvent {
           logger.error(new PushError('error'))
           logger.error(new PushError(e))
         })
-        headersObj = statR = rawR = void 0
+        headersObj = statR = isBuffer = rawR = void 0
       })
     }
   }
