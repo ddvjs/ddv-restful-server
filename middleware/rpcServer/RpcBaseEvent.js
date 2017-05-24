@@ -1,5 +1,6 @@
 'use strict'
 const RpcError = require('./RpcError.js')
+const ddvRowraw = require('ddv-rowraw')
 const logger = require('../../lib/logger.js')
 const MessageEventEmitter = require('../../lib/MessageEventEmitter.js')
 class RpcBaseEvent extends MessageEventEmitter {
@@ -24,10 +25,13 @@ class RpcBaseEvent extends MessageEventEmitter {
     this.ws.on('close', this.onClose.bind(this))
     // 获取文件事件
     this.on('protocol::rpc', this.onMessageRpc.bind(this))
+    // 获取文件事件
+    this.on(['rpc', 'call'], this.onMessageRpcCall.bind(this))
   }
+  onClose (e) {}
   // 推送类型的信息
   onMessageRpc (res) {
-    if (!(res.method && res.path && this.emit(['rpc', res.method.toLowerCase(), res.path], res.headers, res.body, res))) {
+    if (!(res.method && res.path && this.emit(['rpc', res.method.toLowerCase()], res.headers, res.body, res))) {
       logger.error(`[gwcid:${this.gwcid}]onMessageRpc error`)
       this.send(`Rpc request not found, not find method:${res.method}`)
       .catch(e => {
@@ -35,24 +39,43 @@ class RpcBaseEvent extends MessageEventEmitter {
       })
     }
   }
-  onClose (e) {}
-  rpcCallRun (res) {
-    var {wcids, path, body} = res.data
+  onMessageRpcCall (headers, body, res) {
+    this.onMessageRpcCallRun(headers, body, res)
+    .then(res => {
+      return ddvRowraw.stringifyPromise({
+        request_id: headers.request_id
+      }, JSON.stringify('body'), `RPC/1.0 200 OK`)
+    })
+    .catch(e => {
+      return ddvRowraw.stringifyPromise({
+        request_id: headers.request_id
+      }, JSON.stringify('body'), `RPC/1.0 500 OK`)
+    })
+    .then(raw => this.send(raw))
+  }
+  onMessageRpcCallRun (headers, body, {path}) {
+    var wcids
 
-    if (typeof res.data !== 'object') {
+    if (typeof headers !== 'object') {
       return Promise.reject(new RpcError('Data is illegal, data is not a valid object', 'DATA_VALID_OBJECT'))
     }
 
-    if (res.data.guid !== this.serverGuid) {
+    if (headers.guid !== this.serverGuid) {
       return Promise.reject(new RpcError('Rpc serverGuid and call serverGuid inconsistent', 'SERVER_GUID_ERROR'))
     }
 
-    if (res.data.time_stamp !== this.gwcidTimeStamp) {
+    if (headers.time_stamp !== this.gwcidTimeStamp) {
       return Promise.reject(new RpcError('Rpc gwcidTimeStamp and call gwcidTimeStamp inconsistent', 'GWCID_TIMESTAMP_ERROR'))
     }
 
-    if ((typeof wcids === 'string' && wcids.length > 0) || typeof wcids === 'number') {
-      wcids = wcids.toString()
+    try {
+      wcids = JSON.parse(headers.wcids)
+    } catch (e) {
+      e.errorId = 'WCIDS_PARSE_ERROR'
+      return Promise.reject(e)
+    }
+    if (!Array.isArray(wcids)) {
+      return Promise.reject(new RpcError('Wcids must be an array', 'WCIDS_MUST_BE_AN_ARRAY'))
     }
 
     if (wcids.length < 0) {

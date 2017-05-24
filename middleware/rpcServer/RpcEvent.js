@@ -9,8 +9,7 @@ class RpcEvent extends RpcBaseEvent {
     this.init()
   }
   init () {
-    // 获取文件事件
-    this.on(['rpc', 'call', '/v1_0/push/send'], (headers, body, res) => console.log(headers, body, this.serverGuid, this.gwcidTimeStamp, res) || this.send(ddvRowraw.stringify({request_id: headers.request_id}, 'body', `RPC/1.0 200 OK`)))
+    
   }
   rpcCall (path, wcids, body) {
     return new Promise(function (resolve, reject) {
