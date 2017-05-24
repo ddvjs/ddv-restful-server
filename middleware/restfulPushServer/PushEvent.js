@@ -11,6 +11,7 @@ const querystring = require('querystring')
 const url = require('url')
 const http = require('http')
 const https = require('https')
+const PushError = require('./PushError')
 const regular = /\-/g
 
 class PushEvent extends PushBaseEvent {
@@ -42,7 +43,7 @@ class PushEvent extends PushBaseEvent {
   pushClose (headers, body, res) {
     var requestId
     if (!this.isWsOpen()) {
-      logger.error(new Error(`${this.gwcid}Has been closed, on pushClose`))
+      logger.error(new PushError(`${this.gwcid}Has been closed, on pushClose`, 'HAS_BEEN_CLOSED'))
       return
     }
 
@@ -56,7 +57,7 @@ class PushEvent extends PushBaseEvent {
     var headersObj = Object.create(null)
 
     if (!this.isWsOpen()) {
-      logger.error(new Error(`${this.gwcid}Has been closed, on pushOpen`))
+      logger.error(new PushError(`${this.gwcid}Has been closed, on pushOpen`, 'HAS_BEEN_CLOSED'))
       return
     }
     // 请求id
@@ -109,7 +110,7 @@ class PushEvent extends PushBaseEvent {
           if (res.headers[lowkey] === this.pingDataH[key]) {
             delete res.headers[lowkey]
           } else {
-            logger.error(new Error(`headers sign fail, ${key}, ${res.headers[lowkey]}, ${res.headers}`))
+            logger.error(new PushError(`headers sign fail, ${key}, ${res.headers[lowkey]}, ${res.headers}`, 'HEADERS_SIGN_FAIL'))
             return false
           }
           lowkey = void 0
@@ -118,11 +119,11 @@ class PushEvent extends PushBaseEvent {
         Object.assign(opt, this.options.apiUrlOpt)
         // 判断是否已经修改了发过去的请求id
         if (res.headers.request_id !== opt.request_id) {
-          logger.error(new Error('request_id sign fail'))
-          reject(new Error('request_id sign fail'))
+          logger.error(new PushError('request_id sign fail', 'REQUEST_ID_SIGN_FAIL'))
+          reject(new PushError('request_id sign fail', 'REQUEST_ID_SIGN_FAIL'))
         } else if (res.headers.host !== opt.host) {
-          logger.error(new Error('host sign fail'))
-          reject(new Error('host sign fail'))
+          logger.error(new PushError('host sign fail', 'HOST_SIGN_FAIL'))
+          reject(new PushError('host sign fail', 'HOST_SIGN_FAIL'))
         } else {
           // 请求php的头 空对象
           opt.headers = Object.create(null)
@@ -162,7 +163,7 @@ class PushEvent extends PushBaseEvent {
       logger.error('Signature failed')
       logger.error(e)
       return new Promise((resolve, reject) => {
-        reject(new Error('Signature failed'))
+        reject(new PushError('Signature failed', 'SIGNATURE_FAILED'))
       })
     })
   }
@@ -214,7 +215,7 @@ class PushEvent extends PushBaseEvent {
   pushPingHeartbeat (headers, body, res) {
     var requestId
     if (!this.isWsOpen()) {
-      logger.error(new Error(`${this.gwcid}Has been closed, on pushPingHeartbeat`))
+      logger.error(new PushError(`${this.gwcid}Has been closed, on pushPingHeartbeat`, 'HAS_BEEN_CLOSED'))
       return
     }
     if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
@@ -241,7 +242,7 @@ class PushEvent extends PushBaseEvent {
   onApiModelProxy (res) {
     var requestId, body
     if (!this.isWsOpen()) {
-      logger.error(new Error(`${this.gwcid}Has been closed, on onApiModelProxy`))
+      logger.error(new PushError(`${this.gwcid}Has been closed, on onApiModelProxy`, 'HAS_BEEN_CLOSED'))
       return
     }
     if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
@@ -284,7 +285,7 @@ class PushEvent extends PushBaseEvent {
   // 发送信息个用户，信息来源rpc
   sendMsgToUser (headers, body) {
     if (!this.isWsOpen()) {
-      let e = new Error(`${this.gwcid}Has been closed, on sendMsgToUser`)
+      let e = new PushError(`${this.gwcid}Has been closed, on sendMsgToUser`, 'HAS_BEEN_CLOSED')
       e.errorId = 'HAS_BEEN_CLOSED'
       logger.error(e)
       return Promise.reject(e)
@@ -299,9 +300,7 @@ class PushEvent extends PushBaseEvent {
     return ddvRowraw.stringifyPromise({}, body, `MESSAGE ${headers['push-path']} PUSH/1.0`)
     .then(raw => this.send(raw))
     .catch(e => {
-      let resError = new Error('send to user fail')
-      resError.errorId = 'SEND_TO_USER_FAIL'
-      return Promise.reject(resError)
+      return Promise.reject(new PushError('send to user fail', 'SEND_TO_USER_FAIL'))
     })
   }
   // 收到消息的时候
@@ -315,14 +314,10 @@ class PushEvent extends PushBaseEvent {
 worker.sendMessageByConnId = sendMessageByConnId
 function sendMessageByConnId (connId, type, headers, body) {
   if (!(type && type === 'restfulPushServer')) {
-    let e = new Error('type error')
-    e.errorId = 'TYPE_CONN'
-    return Promise.reject(e)
+    return Promise.reject(new PushError('type error', 'TYPE_CONN'))
   }
   if (!(wsConnQueue && wsConnQueue[connId] && workerUtil.isFunction(wsConnQueue[connId].sendMsgToUser))) {
-    let e = new Error('find not user')
-    e.errorId = 'FIND_NOT_CONN'
-    return Promise.reject(e)
+    return Promise.reject(new PushError('find not user', 'FIND_NOT_CONN'))
   }
   return wsConnQueue[connId].sendMsgToUser(headers, body)
 }
