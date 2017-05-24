@@ -12,7 +12,7 @@ function apiModelProxy (res, options) {
     .then(() => opt)
   })
   .then(opt => {
-    return request(opt, opt.method, res.body)
+    return request(opt, res.body)
   })
 }
 function getOpt (res) {
