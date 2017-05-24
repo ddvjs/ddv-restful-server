@@ -2,6 +2,7 @@
 
 const WebSocket = require('ws')
 const logger = require('../../lib/logger.js')
+const workerUtil = require('ddv-worker/util')
 const MessageEventEmitter = require('../../lib/MessageEventEmitter.js')
 
 class ClientWs extends MessageEventEmitter {
@@ -16,10 +17,15 @@ class ClientWs extends MessageEventEmitter {
     this.processRequest = Object.create(null)
     this.ws = null
     this.url = null
+    this.wsTryNum = 0
+    this.wsTrySum = 3
+    this.wsTryLastTime = 0
+    this.wsTryIntervalTime = 3 * 1000
   }
   clientWsEventInit (guid, options) {
     this.on('ws::message', this.onMessage.bind(this))
   }
+  // 获取ws
   getWs () {
     var isConnWs = false
     if (this.ws) {
@@ -29,32 +35,66 @@ class ClientWs extends MessageEventEmitter {
         isConnWs = true
         try {
           // 强行关闭
-          this.ws && this.ws.close && this.ws.close()
+          workerUtil.isFunction(this.ws.close) && this.ws.close()
         } catch (e) {}
       }
     } else {
       isConnWs = true
     }
+    return this.getWsRun(isConnWs)
+  }
+  getWsRun (isConnWs) {
     return new Promise((resolve, reject) => {
       var waitCbState = true
-      var onOpen = () => {
-        logger.log('ws conn open success')
+      var removeListener = () => {
+        // 解绑打开事件
         onOpen && this.removeListener('ws::open', onOpen)
+        // 解绑错误事件
         onError && this.removeListener('ws::error', onError)
-        waitCbState && this.getWs().then(resolve, reject)
-        waitCbState = onError = onOpen = void 0
+        // 解绑错误事件
+        onError && this.removeListener('ws::close', onError)
+        // 回收
+        waitCbState = onError = onOpen = removeListener = void 0
+      }
+      var onOpen = () => {
+        if (!waitCbState) { return }
+        // 成功连接上
+        logger.log('ws conn open success')
+        // 清零尝试次数
+        this.wsTryNum = 0
+        // 解绑事件
+        removeListener && removeListener()
+        // 重新
+        this.getWs().then(resolve, reject)
       }
       var onError = e => {
+        if (!waitCbState) { return }
+        // 连接失败
         logger.error('ws conn error')
+        // 连接错误
         logger.error(e)
-        onOpen && this.removeListener('ws::open', onOpen)
-        onError && this.removeListener('ws::error', onError)
-        waitCbState && reject(e)
-        waitCbState = onError = onOpen = void 0
+        // 解绑事件
+        removeListener && removeListener()
+        // 重试次数还没有超出限制就继续重试
+        if (this.wsTryNum++ < this.wsTrySum) {
+          this.getWs().then(resolve, reject)
+        } else if (new Date() - this.wsTryLastTime > this.wsTryIntervalTime) {
+          // 过一段时间可以继续重试
+          this.wsTryNum = 1
+          this.getWs().then(resolve, reject)
+        } else {
+          // 反馈失败
+          reject(e)
+        }
       }
+      // 绑定事件
       this.once('ws::open', onOpen)
+      // 绑定事件
       this.once('ws::error', onError)
+      // 绑定事件
+      this.once('ws::close', onError)
       if (isConnWs) {
+        this.wsTryLastTime = new Date()
         // 获取ws地址
         this.getClientUrl()
         // 开始连接
@@ -70,23 +110,28 @@ class ClientWs extends MessageEventEmitter {
     })
   }
 
-  // 处理请求
-  send (raw) {
-    console.log('raw', raw)
-    this.getWs().then(ws => {
-      console.log(4424)
-      ws.send(raw)
-      console.log(444)
+  // 发送数据
+  send (raw, options) {
+    // 获取ws长连接
+    this.getWs()
+    .then(ws => {
+      // 以承诺方式发送
+      return new Promise((resolve, reject) => {
+        this.sendWs(raw, options, e => {
+          e ? reject(e) : resolve()
+        })
+      })
     })
   }
+  // 获取客户端地址
   getClientUrl () {
     if (this.url) {
       return Promise.resolve(this.url)
     }
-    let url = this.options.rpcDomainSuffix[0] || 'ws://127.0.0.1/v1_0/rpc'
-    url = url.replace('{{$guid}}', this.guid || '')
-    console.log('-客户端GUID：' + this.guid, url)
-    return Promise.resolve(url)
+    this.url = this.options.rpcDomainSuffix[0] || 'ws://127.0.0.1/v1_0/rpc'
+    this.url = this.url.replace('{{$guid}}', this.guid || '')
+    console.log('-客户端GUID：' + this.guid, this.url)
+    return Promise.resolve(this.url)
   }
 }
 module.exports = ClientWs
