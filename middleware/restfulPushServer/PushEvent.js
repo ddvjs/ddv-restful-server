@@ -117,9 +117,7 @@ class PushEvent extends PushBaseEvent {
       }
     }
     // 如果是使用Buffer模式就强转Buffer
-    if (isBuffer) {
-      rawR = new Buffer(0)
-    }
+    rawR = isBuffer ? new Buffer(0) : ''
 
     if (this.isPushOpened) {
       ddvRowraw.stringifyPromise(
