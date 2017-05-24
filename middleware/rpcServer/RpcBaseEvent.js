@@ -18,6 +18,7 @@ class RpcBaseEvent extends MessageEventEmitter {
     this.workerId = req.workerId
     this.serverGuid = req.serverGuid
     this.gwcidTimeStamp = req.gwcidTimeStamp
+    this.gwcidTimeStampStr = this.gwcidTimeStamp.toString()
   }
   // 初始化
   wsEventBaseInit () {
@@ -47,9 +48,10 @@ class RpcBaseEvent extends MessageEventEmitter {
       }, JSON.stringify('body'), `RPC/1.0 200 OK`)
     })
     .catch(e => {
+      console.log(e)
       return ddvRowraw.stringifyPromise({
         request_id: headers.request_id
-      }, JSON.stringify('body'), `RPC/1.0 500 OK`)
+      }, JSON.stringify('body'), `RPC/1.0 500 ${e.message}`)
     })
     .then(raw => this.send(raw))
   }
@@ -64,7 +66,7 @@ class RpcBaseEvent extends MessageEventEmitter {
       return Promise.reject(new RpcError('Rpc serverGuid and call serverGuid inconsistent', 'SERVER_GUID_ERROR'))
     }
 
-    if (headers.time_stamp !== this.gwcidTimeStamp) {
+    if (headers.time_stamp !== this.gwcidTimeStampStr) {
       return Promise.reject(new RpcError('Rpc gwcidTimeStamp and call gwcidTimeStamp inconsistent', 'GWCID_TIMESTAMP_ERROR'))
     }
 
@@ -77,11 +79,27 @@ class RpcBaseEvent extends MessageEventEmitter {
     if (!Array.isArray(wcids)) {
       return Promise.reject(new RpcError('Wcids must be an array', 'WCIDS_MUST_BE_AN_ARRAY'))
     }
-
     if (wcids.length < 0) {
       return Promise.reject(new RpcError('Rpc gwcidTimeStamp and call gwcidTimeStamp inconsistent', 'GWCID_TIMESTAMP_ERROR'))
     }
+    wcids = this._wcidGroupParse(wcids)
+
     return this.rpcCall(path, wcids, body)
+  }
+  _wcidGroupParse (wcids) {
+    var wcidsObj = Object.create(null)
+    let wcidsArray = wcids || []
+    wcidsArray.forEach(item => {
+      var temp = item.split('-')
+
+      if (wcidsObj[temp[0]] && Array.isArray(wcidsObj[temp[0]])) {
+        wcidsObj[temp[0]].push(temp[1])
+      } else {
+        wcidsObj[temp[0]] = [temp[1]]
+      }
+    })
+    wcidsArray = void 0
+    return wcidsObj
   }
   ping (res) {
     var r

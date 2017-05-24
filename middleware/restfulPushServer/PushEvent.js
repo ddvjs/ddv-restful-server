@@ -79,9 +79,7 @@ class PushEvent extends PushBaseEvent {
     if (this.isPushOpening) {
       rawR = new Buffer(0)
       return ddvRowraw.stringifyPromise(
-        {
-          request_id: headersObj.requestId
-        },
+        headersObj,
         (isBuffer ? new Buffer(0) : ''),
         'PUSH/1.0 202 PUSH_OPENING'
       )
@@ -118,9 +116,7 @@ class PushEvent extends PushBaseEvent {
 
     if (this.isPushOpened) {
       ddvRowraw.stringifyPromise(
-        {
-          request_id: headersObj.requestId
-        },
+        headersObj,
         rawR,
         statR
       )
@@ -136,9 +132,7 @@ class PushEvent extends PushBaseEvent {
       .then(res => {
         this.isPushOpened = true
         ddvRowraw.stringifyPromise(
-          {
-            request_id: headersObj.requestId
-          },
+          headersObj,
           rawR,
           statR
         )
