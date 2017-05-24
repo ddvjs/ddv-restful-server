@@ -117,7 +117,7 @@ class ClientWs extends MessageEventEmitter {
     .then(ws => {
       // 以承诺方式发送
       return new Promise((resolve, reject) => {
-        this.sendWs(raw, options, e => {
+        this.ws.send(raw, options, e => {
           e ? reject(e) : resolve()
         })
       })
