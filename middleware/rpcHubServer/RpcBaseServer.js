@@ -169,15 +169,18 @@ class RpcBaseServer extends EventEmitter {
       return Promise.all(calls)
       .then(resArray => {
         var res = {success: [], error: []}
-        Array.isArray(resArray) && resArray.forEach(({success, error}) => {
-          Array.isArray(success) && res.success.push.apply(res.success, success)
-          Array.isArray(error) && res.error.push.apply(res.error, error)
+        Array.isArray(resArray) && resArray.forEach(t => {
+          if (t) {
+            Array.isArray(t.success) && res.success.push.apply(res.success, t.success)
+            Array.isArray(t.error) && res.error.push.apply(res.error, t.error)
+          }
         })
+        return res
       })
     })
     .then(res => {
       res.error = Array.isArray(res.error) ? res.error : []
-      res.error = Array.concat(res.error, resError)
+      res.error = res.error.concat(resError)
       return res
     })
   }

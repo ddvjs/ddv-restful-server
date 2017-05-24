@@ -12,15 +12,27 @@ class ClientWs extends MessageEventEmitter {
     this.clientWsEventInit()
   }
   baseInit (guid, options) {
+    this.state = true
     this.guid = guid
     this.options = options
     this.processRequest = Object.create(null)
     this.ws = null
     this.url = null
     this.wsTryNum = 0
-    this.wsTrySum = 3
+    this.wsTrySum = 0
     this.wsTryLastTime = 0
     this.wsTryIntervalTime = 3 * 1000
+  }
+  rpcDomainSuffixInit () {
+    var rpcDomainSuffix, res
+    if (this.options && this.options.rpcDomainSuffix) {
+      this.wsTrySum = this.wsTrySum || this.options.rpcDomainSuffix.length || 3
+      rpcDomainSuffix = this.options.rpcDomainSuffix.shift()
+      this.options.rpcDomainSuffix.push(rpcDomainSuffix)
+      res = this.getClientUrl(true)
+    }
+    this.rpcDomainSuffix = rpcDomainSuffix || 'ws://127.0.0.1/v1_0/rpc'
+    return res || this.getClientUrl()
   }
   clientWsEventInit (guid, options) {
     this.on('ws::message', this.onMessage.bind(this))
@@ -68,6 +80,7 @@ class ClientWs extends MessageEventEmitter {
         this.getWs().then(resolve, reject)
       }
       var onError = e => {
+        var isTry = false
         if (!waitCbState) { return }
         // 连接失败
         logger.error('ws conn error')
@@ -77,11 +90,20 @@ class ClientWs extends MessageEventEmitter {
         removeListener && removeListener()
         // 重试次数还没有超出限制就继续重试
         if (this.wsTryNum++ < this.wsTrySum) {
-          this.getWs().then(resolve, reject)
+          isTry = true
         } else if (new Date() - this.wsTryLastTime > this.wsTryIntervalTime) {
+          isTry = true
           // 过一段时间可以继续重试
           this.wsTryNum = 1
-          this.getWs().then(resolve, reject)
+        }
+        if (isTry) {
+          // 使用新前缀获取url地址
+          this.rpcDomainSuffixInit()
+          .then(() => {
+            // 重新获取ws
+            return this.getWs()
+          })
+          .then(resolve, reject)
         } else {
           // 反馈失败
           reject(e)
@@ -124,13 +146,14 @@ class ClientWs extends MessageEventEmitter {
     })
   }
   // 获取客户端地址
-  getClientUrl () {
-    if (this.url) {
+  getClientUrl (isReGet = false) {
+    if (this.url && isReGet !== true) {
       return Promise.resolve(this.url)
     }
-    this.url = this.options.rpcDomainSuffix[0] || 'ws://127.0.0.1/v1_0/rpc'
-    this.url = this.url.replace('{{$guid}}', this.guid || '')
-    console.log('-客户端GUID：' + this.guid, this.url)
+    if (!this.rpcDomainSuffix) {
+      return this.rpcDomainSuffixInit()
+    }
+    this.url = this.rpcDomainSuffix.replace('{{$guid}}', this.guid || '')
     return Promise.resolve(this.url)
   }
 }
