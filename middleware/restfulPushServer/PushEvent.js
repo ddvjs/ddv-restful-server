@@ -66,17 +66,36 @@ class PushEvent extends PushBaseEvent {
     headersObj.gwcid = this.gwcid
     // 服务器唯一识别号
     headersObj.serverGuid = this.serverGuid
+    // 判断当前是否使用buffer模式返回
+    let isBuffer = this.bodytype === 'buffer' || (this.bodytype === 'auto' && res.headers.bodytype === 'buffer')
 
     if (!(res.headers && headersObj.requestId)) {
+      logger.error(new PushError('requestId Not FOUND'))
       return
     }
-    this.pushPing(headers, body, res)
-    .then((res) => {
-      console.log('签名结束', res)
-    })
-    .catch(e => {
-      console.log('签名失败', e)
-    })
+
+    if (this.isPushOpening) {
+      ddvRowraw.stringifyPromise(
+        {
+          request_id: headersObj.requestId
+        },
+        (isBuffer ? new Buffer(0) : ''),
+        'PUSH/1.0 202 PUSH_OPENING'
+      )
+      .then(raw => {
+        console.log(123123131)
+        this.send(raw)
+      })
+      .catch(e => {
+        this.pushPing(headers, body, res)
+        .then((res) => {
+          console.log('签名结束', res)
+        })
+        .catch(e => {
+          console.log('签名失败', e)
+        })
+      })
+    }
   }
   pushPing (headers, body, res) {
     var opt = Object.create(null)
