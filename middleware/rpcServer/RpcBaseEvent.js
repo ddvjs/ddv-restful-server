@@ -84,7 +84,12 @@ class RpcBaseEvent extends MessageEventEmitter {
     }
     wcids = this._wcidGroupParse(wcids)
 
-    return this.rpcCall(path, wcids, body)
+    try {
+      headers.headers = JSON.parse(headers.headers)
+    } catch (e) {
+      headers.headers = {}
+    }
+    return this.rpcCall(path, wcids, headers.headers, body)
   }
   _wcidGroupParse (wcids) {
     var wcidsObj = Object.create(null)

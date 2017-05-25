@@ -339,8 +339,11 @@ class PushEvent extends PushBaseEvent {
     } else if (this.bodytype === 'string' && Buffer.isBuffer(body)) {
       body = body.toString('utf-8')
     }
-    headers['push-path'] = (headers['push-path'].charAt(0) === '/' ? '' : '/') + headers['push-path']
-    return ddvRowraw.stringifyPromise({}, body, `MESSAGE ${headers['push-path']} PUSH/1.0`)
+    var pushPath = '/'
+    if (headers && headers['push-path']) {
+      pushPath = (headers['push-path'].charAt(0) === '/' ? '' : '/') + headers['push-path']
+    }
+    return ddvRowraw.stringifyPromise({}, body, `MESSAGE ${pushPath} PUSH/1.0`)
     .then(raw => this.send(raw))
     .catch(e => {
       return Promise.reject(new PushError('send to user fail', 'SEND_TO_USER_FAIL'))
