@@ -1,7 +1,7 @@
 'use strict'
 
 const RpcBaseEvent = require('./RpcBaseEvent.js')
-const ddvRowraw = require('ddv-rowraw')
+// const ddvRowraw = require('ddv-rowraw')
 
 class RpcEvent extends RpcBaseEvent {
   constructor (options, rpcCall, ws, req) {

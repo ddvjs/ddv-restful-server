@@ -8,6 +8,7 @@ class RpcCall extends RpcBaseServer {
     super(options, req, res, next)
     this.init()
   }
+  // 初始化
   init () {
   }
   rpcCall (rpcId, guid, wcids, headers, body, path, timeStamp) {

@@ -1,7 +1,6 @@
 'use strict'
 const wsConnQueue = require('./wsConnQueue.js')
 const request = require('../../lib/request')
-const worker = require('ddv-worker')
 const workerUtil = require('ddv-worker/util')
 const PushBaseEvent = require('./PushBaseEvent.js')
 const apiModelProxy = require('./apiModelProxy.js')
@@ -355,14 +354,5 @@ class PushEvent extends PushBaseEvent {
     }
   }
 }
-worker.sendMessageByConnId = sendMessageByConnId
-function sendMessageByConnId (connId, type, headers, body) {
-  if (!(type && type === 'restfulPushServer')) {
-    return Promise.reject(new PushError('type error', 'TYPE_CONN'))
-  }
-  if (!(wsConnQueue && wsConnQueue[connId] && workerUtil.isFunction(wsConnQueue[connId].sendMsgToUser))) {
-    return Promise.reject(new PushError('find not user', 'FIND_NOT_CONN'))
-  }
-  return wsConnQueue[connId].sendMsgToUser(headers, body)
-}
+
 module.exports = PushEvent
