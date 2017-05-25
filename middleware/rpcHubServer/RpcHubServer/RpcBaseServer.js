@@ -119,6 +119,7 @@ class RpcBaseServer extends EventEmitter {
       return res
     })
   }
+  // 解析，获取信息
   getDataBaseByRpcHeadersAndPath (path, rpcHeaders, body) {
     var id, gwcids, isSync
     if (!(rpcHeaders && rpcHeaders.id)) {
@@ -147,6 +148,7 @@ class RpcBaseServer extends EventEmitter {
   }
   rpcCallByDataBase (data) {
     var resError = []
+    // 获取gwcid组合数据
     return gwcidGroup(data.gwcids)
     // 处理错误格式的id
     .then(({gwcids, gwcidsError}) => {
@@ -160,6 +162,7 @@ class RpcBaseServer extends EventEmitter {
         }
         let timeStampS = gwcids[guid]
         for (let timeStamp in timeStampS) {
+          // 建立连接
           let res = this.rpcCall(data.id, guid, timeStampS[timeStamp], data.headers, data.body, data.path, timeStamp)
           calls.push(res)
           timeStamp = res = void 0

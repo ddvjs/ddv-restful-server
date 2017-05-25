@@ -11,9 +11,11 @@ class RpcCall extends RpcBaseServer {
   // 初始化
   init () {
   }
+  // 建立连接
   rpcCall (rpcId, guid, wcids, headers, body, path, timeStamp) {
     return rpcClient(guid, this.options)
     .then(client => {
+      // 向客户端发出请求
       return client.request({
         rpc_id: rpcId,
         guid: guid,

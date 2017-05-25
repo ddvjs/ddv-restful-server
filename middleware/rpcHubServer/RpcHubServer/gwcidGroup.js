@@ -5,6 +5,7 @@ const workerIdReg = /^\d+$/
 const connIdReg = /^[\da-z]+$/
 const timeStampReg = /^\d+$/
 const RpcHubError = require('../RpcHubError')
+
 function gwcidGroup (gwcidsInput) {
   var gwcids = []
   var gwcidsError = []

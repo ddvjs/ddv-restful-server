@@ -11,8 +11,10 @@ function getClientWs (guid, options) {
   if (clientWsQueue[guid] && clientWsQueue[guid] instanceof ClientWs && clientWsQueue[guid].state) {
     return Promise.resolve(clientWsQueue[guid])
   }
+  // 创建连接
   client = clientWsQueue[guid] = new ClientWs(guid, options)
   client.on('close', () => {
+    // 删除用户
     delete clientWsQueue[guid]
   })
   client = options = void 0
