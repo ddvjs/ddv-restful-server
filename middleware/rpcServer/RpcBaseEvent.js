@@ -45,7 +45,7 @@ class RpcBaseEvent extends MessageEventEmitter {
     .then(res => {
       return ddvRowraw.stringifyPromise({
         request_id: headers.request_id
-      }, JSON.stringify('body'), `RPC/1.0 200 OK`)
+      }, JSON.stringify(res), `RPC/1.0 200 OK`)
     })
     .catch(e => {
       console.log(e)
@@ -53,7 +53,7 @@ class RpcBaseEvent extends MessageEventEmitter {
         request_id: headers.request_id
       }, JSON.stringify('body'), `RPC/1.0 500 ${e.message}`)
     })
-    .then(raw => this.send(raw))
+    .then(raw => this.send(raw.toString()))
   }
   onMessageRpcCallRun (headers, body, {path}) {
     var wcids
