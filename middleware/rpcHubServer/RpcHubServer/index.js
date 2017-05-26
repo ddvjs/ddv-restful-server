@@ -24,10 +24,13 @@ class RpcCall extends RpcBaseServer {
         time_stamp: timeStamp
       }, body, `CALL ${path} RPC/1.0`)
       .then(res => {
+        // {success, fails}
         console.log('resdfsfsdfsfss', res)
       })
-      .catch(res => {
-        console.log('resdfsfsdfsfss', res)
+      .catch(e => {
+        e.errorId = ''
+        e.message = ''
+        return Promise.reject(e)
       })
     })
   }

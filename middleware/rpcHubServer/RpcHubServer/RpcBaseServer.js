@@ -70,53 +70,30 @@ class RpcBaseServer extends EventEmitter {
   }
   // 初始化
   rpcHubBaseRun () {
-    this.rpcCallBaseByRpcHeadersAndPath(this.req.path, this.rpcHeaders, this.postBuffer)
-    .then(data => {
-      data.statusCode = data.statusCode || 200
-      data.errorId = (data.statusCode >= 200 && data.statusCode < 300) ? 'OK' : 'UNKNOWN_ERROR'
-      return {
-        statusCode: data.statusCode,
-        statusMessage: data.errorId,
-        body: JSON.stringify(data)
-      }
-    })
-    .catch(e => {
-      var data = {}
-      data.statusCode = e.statusCode || 500
-      data.errorId = e.errorId || e.message || 'Unknown Error'
-      data.message = e.message || data.errorId || 'UNKNOWN_ERROR'
-      return {
-        statusCode: data.statusCode,
-        statusMessage: data.errorId,
-        body: JSON.stringify(data)
-      }
-    })
-    .then(({statusCode, statusMessage, body}) => {
-      // 输出头
-      this.res.set({'Content-Type': 'application/json'})
-      this.res.statusCode = statusCode || this.res.statusCode
-      this.res.statusMessage = statusMessage || this.res.statusMessage
-
-      // 写出数据
-      this.res.write(body)
-      // 结束
-      this.res.end()
-      statusCode = statusMessage = body = void 0
-    })
-  }
-  // 初始化
-  rpcCallBaseByRpcHeadersAndPath (path, rpcHeaders, postBuffer) {
-    return this.getDataBaseByRpcHeadersAndPath(path, rpcHeaders, postBuffer)
+    this.getDataBaseByRpcHeadersAndPath(this.req.path, this.rpcHeaders, this.postBuffer)
     .then(data => {
       var res = this.rpcCallByDataBase(data)
+      // 如果是非同步模式
       if (!data.isSync) {
         res
         .catch(e => console.log('syssf', e))
         .then(e => console.log('syssf', e))
-        // 非同步模式先直接返回结果，其他结果通过回调方式返回
-        res = Promise.resolve({success: [], error: [], id: data.id})
+        // 非同步模式先直接返回结果，其他结果通过回调方式返回- 补充输出数据
+        res = Promise.resolve({success: [], fails: [], id: data.id}).then(res => resFormat(res))
       }
       return res
+    })
+    .then(res => {
+      // 输出头
+      this.res.set({'Content-Type': 'application/json'})
+      this.res.statusCode = res.statusCode || this.res.statusCode
+      this.res.statusMessage = res.errorId || this.res.statusMessage
+
+      // 写出数据
+      this.res.write(JSON.stringify(res))
+      // 结束
+      this.res.end()
+      res = void 0
     })
   }
   // 解析，获取信息
@@ -147,14 +124,15 @@ class RpcBaseServer extends EventEmitter {
     return Promise.resolve({id, gwcids, path, isSync, body, headers: rpcHeaders})
   }
   rpcCallByDataBase (data) {
-    var resError = []
+    var rpcCallRes = {success: [], fails: []}
+    var {fails, success} = rpcCallRes
     // 获取gwcid组合数据
     return gwcidGroup(data.gwcids)
     // 处理错误格式的id
     .then(({gwcids, gwcidsError}) => {
       var calls = []
       gwcidsError.forEach(gwcid => {
-        resError.push({'gwcid': gwcid, 'errorId': 'GWCID_FORMAT_ERROR'})
+        fails.push({'gwcid': gwcid, 'errorId': 'GWCID_FORMAT_ERROR', 'message': 'gwcid wrong format'})
       })
       for (let guid in gwcids) {
         if (typeof gwcids[guid] !== 'object') {
@@ -164,28 +142,37 @@ class RpcBaseServer extends EventEmitter {
         for (let timeStamp in timeStampS) {
           // 建立连接
           let res = this.rpcCall(data.id, guid, timeStampS[timeStamp], data.headers, data.body, data.path, timeStamp)
+          .then(res => {
+            Array.isArray(res.success) && success.push.apply(success, res.success)
+            Array.isArray(res.fails) && fails.push.apply(fails, res.fails)
+          })
+          .catch(e => {
+            Array.isArray(timeStampS[timeStamp]) && timeStampS[timeStamp].forEach(wcid => {
+              // 循环加入fails
+              fails.push({'gwcid': (`${guid}-${wcid}-${timeStamp}`), 'errorId': e.errorId || 'GWCID_FORMAT_ERROR', 'message': e.message || e.errorId || 'gwcid wrong format'})
+            })
+          })
           calls.push(res)
           timeStamp = res = void 0
         }
         timeStampS = guid = void 0
       }
       return Promise.all(calls)
-      .then(resArray => {
-        var res = {success: [], error: []}
-        Array.isArray(resArray) && resArray.forEach(t => {
-          if (t) {
-            Array.isArray(t.success) && res.success.push.apply(res.success, t.success)
-            Array.isArray(t.error) && res.error.push.apply(res.error, t.error)
-          }
-        })
-        return res
-      })
     })
-    .then(res => {
-      res.error = Array.isArray(res.error) ? res.error : []
-      res.error = res.error.concat(resError)
+    .then(() => {
+      return rpcCallRes
+    })
+    // 转换错误数据为可序列化格式
+    .catch(e => {
+      var res = {}
+      res.statusCode = e.statusCode || 500
+      res.errorId = e.errorId || e.message || 'Unknown Error'
+      res.message = e.message || res.errorId || 'UNKNOWN_ERROR'
+      res.errorStack = e.stack || ''
       return res
     })
+    // 补充输出数据
+    .then(res => resFormat(res))
   }
   // 销毁
   destroy () {
@@ -206,3 +193,16 @@ class RpcBaseServer extends EventEmitter {
   }
 }
 module.exports = RpcBaseServer
+function resFormat (res) {
+  if (!res.statusCode) {
+    // 获取输出状态码
+    res.statusCode = (res.errorId === void 0 ? 200 : (res.errorId === 'OK' || res.errorId === '' ? 200 : 500))
+  }
+  if (!res.errorId) {
+    res.errorId = (res.statusCode >= 200 && res.statusCode < 300) ? 'OK' : 'UNKNOWN_ERROR'
+  }
+  if (!res.message) {
+    res.message = (res.statusCode >= 200 && res.statusCode < 300) ? '' : res.errorId || 'UNKNOWN_ERROR'
+  }
+  return Promise.resolve(res)
+}
