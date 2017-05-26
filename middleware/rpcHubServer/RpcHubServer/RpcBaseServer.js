@@ -143,8 +143,22 @@ class RpcBaseServer extends EventEmitter {
           // 建立连接
           let res = this.rpcCall(data.id, guid, timeStampS[timeStamp], data.headers, data.body, data.path, timeStamp)
           .then(res => {
-            Array.isArray(res.success) && success.push.apply(success, res.success)
-            Array.isArray(res.fails) && fails.push.apply(fails, res.fails)
+            Array.isArray(res.success) && res.success.forEach(t => {
+              if (t.wcid) {
+                t.gwcid = `${guid}-${t.wcid}-${timeStamp}`
+                delete t.wcid
+              }
+              // 循环加入fails
+              success.push(t)
+            })
+            Array.isArray(res.fails) && res.fails.forEach(t => {
+              if (t.wcid) {
+                t.gwcid = `${guid}-${t.wcid}-${timeStamp}`
+                delete t.wcid
+              }
+              // 循环加入fails
+              fails.push(t)
+            })
           })
           .catch(e => {
             Array.isArray(timeStampS[timeStamp]) && timeStampS[timeStamp].forEach(wcid => {
