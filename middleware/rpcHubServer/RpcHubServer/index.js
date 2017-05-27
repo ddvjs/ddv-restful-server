@@ -42,9 +42,6 @@ class RpcCall extends RpcBaseServer {
         }
         res.errorId = e.errorId = res.errorId || 'RPC_CALL_ERROR_ON_HUB'
         res.message = e.message = res.message || 'rpcCall error on Hub'
-        console.log('\n\n\n')
-        console.log(res)
-        console.log('\n\n\n')
         return Promise.reject(res)
       })
     })
