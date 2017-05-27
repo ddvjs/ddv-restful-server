@@ -28,6 +28,7 @@ class RpcCall extends RpcBaseServer {
         console.log('resdfsfsdfsfss', res)
       })
       .catch(e => {
+        console.log('e', e)
         e.errorId = ''
         e.message = ''
         return Promise.reject(e)

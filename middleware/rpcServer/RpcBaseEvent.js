@@ -43,15 +43,21 @@ class RpcBaseEvent extends MessageEventEmitter {
   onMessageRpcCall (headers, body, res) {
     this.onMessageRpcCallRun(headers, body, res)
     .then(res => {
+      res.errorId = res.errorId || 'OK'
+      res.message = res.message || ''
       return ddvRowraw.stringifyPromise({
         request_id: headers.request_id
       }, JSON.stringify(res), `RPC/1.0 200 OK`)
     })
     .catch(e => {
-      console.log(e)
+      e.errorId = e.errorId || e.message || 'UNKNOWN_ERROR'
+      e.message = e.message || e.errorId || 'Unknown Error'
       return ddvRowraw.stringifyPromise({
         request_id: headers.request_id
-      }, JSON.stringify('body'), `RPC/1.0 500 ${e.message}`)
+      }, JSON.stringify({
+        errorId: e.errorId,
+        message: e.message
+      }), `RPC/1.0 500 ${e.errorId}`)
     })
     .then(raw => this.send(raw.toString()))
   }

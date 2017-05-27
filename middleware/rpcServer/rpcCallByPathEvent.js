@@ -11,13 +11,23 @@ worker.on('worker::event::rpcCall', function (res, handle, fromWorkerId, toWorke
   }
   onRpcCall(res.message)
   .then(callRes => {
+    callRes.errorId = callRes.errorId || 'OK'
+    callRes.message = callRes.message || ''
     worker.sendToWorker(fromWorkerId, 'rpcCallCallback', {id: res.id, res: callRes})
   })
-  .catch(e => console.log('onRpcCall', e))
+  .catch(e => {
+    worker.sendToWorker(fromWorkerId, 'rpcCallCallback', {
+      id: res.id,
+      res: {
+        message: e.message || 'rpc call fail rpcCall',
+        errorId: e.errorId || 'RPC_CALL_FAIL_RPCCALL'
+      }
+    })
+  })
 })
 function onRpcCall (message) {
   var res = Object.create(null)
-  res.error = []
+  res.fails = []
   res.success = []
 
   if (typeof message !== 'object') {
@@ -37,17 +47,21 @@ function onRpcCall (message) {
         // 调用具体的处理
         rpcCallByPathEvent[path](connId, headers, body)
         // 成功的时候
-        .then(resT => res.success.push(resT))
+        .then(body => res.success.push({
+          wcid: `${worker.id}-${connId}`,
+          message: '',
+          errorId: 'OK',
+          body: body
+        }))
         // 失败的时候
-        .catch(e => res.error.push({
-          state: false,
+        .catch(e => res.fails.push({
+          wcid: `${worker.id}-${connId}`,
           message: e.message || 'rpc call fail onRpcCall',
           errorId: e.errorId || 'RPC_CALL_FAIL_ONCALL'
         })
       ))
     } else {
-      res.error.push({
-        state: false,
+      res.fails.push({
         message: 'not find rpc call path',
         errorId: 'NOT_FIND_RPC_CALL_PATH'
       })
@@ -56,7 +70,6 @@ function onRpcCall (message) {
 
   return Promise.all(run)
   .then(() => {
-    console.log('wwwwww', res)
     return Promise.resolve(res)
   })
 }

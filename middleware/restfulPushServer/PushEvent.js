@@ -76,10 +76,10 @@ class PushEvent extends PushBaseEvent {
     }
 
     if (this.isPushOpening) {
-      rawR = new Buffer(0)
+      rawR = Buffer.alloc(0)
       return ddvRowraw.stringifyPromise(
         headersObj,
-        (isBuffer ? new Buffer(0) : ''),
+        (isBuffer ? Buffer.alloc(0) : ''),
         'PUSH/1.0 202 PUSH_OPENING'
       )
       .then(raw => this.send(raw))
@@ -111,7 +111,7 @@ class PushEvent extends PushBaseEvent {
       }
     }
     // 如果是使用Buffer模式就强转Buffer
-    rawR = isBuffer ? new Buffer(0) : ''
+    rawR = isBuffer ? Buffer.alloc(0) : ''
 
     if (this.isPushOpened) {
       ddvRowraw.stringifyPromise(
@@ -156,7 +156,7 @@ class PushEvent extends PushBaseEvent {
     // 获取onOpen地址
     opt.path = this.options.rpcEvent.on_open
 
-    return this.request(opt, (res.headers.bodytype === 'buffer' ? (new Buffer(0)) : ''), 'PING /v1_0/sign PUSH/1.0')
+    return this.request(opt, (res.headers.bodytype === 'buffer' ? (Buffer.alloc(0)) : ''), 'PING /v1_0/sign PUSH/1.0')
     .then(res => {
       let pingDataHKey = Object.keys(this.pingDataH || [])
 
@@ -224,7 +224,7 @@ class PushEvent extends PushBaseEvent {
     // 第一次上线时间
     this.pingData.timeOnline = this.pushTimeOnLine
     // 把参数序列化转为buffer缓存区数据
-    this.pingDataRaw = new Buffer(querystring.stringify(this.pingData), 'utf-8')
+    this.pingDataRaw = Buffer.from(querystring.stringify(this.pingData), 'utf-8')
     // 计算得出发送php的数据的二进制md5的base64
     this.pingDataMd5Base64 = crypto.createHash('md5').update(this.pingDataRaw).digest('base64')
     // 通知php的基本头
@@ -275,7 +275,7 @@ class PushEvent extends PushBaseEvent {
       {
         request_id: requestId
       },
-      ((this.bodytype === 'buffer' || (this.bodytype === 'auto' && res.bodytype === 'buffer')) ? new Buffer(0) : ''),
+      ((this.bodytype === 'buffer' || (this.bodytype === 'auto' && res.bodytype === 'buffer')) ? Buffer.alloc(0) : ''),
       'PUSH/1.0 200 OK'
     )
     .then(raw => this.send(raw))
@@ -291,7 +291,7 @@ class PushEvent extends PushBaseEvent {
     if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
       return
     }
-    resBody = res.bodytype === 'buffer' ? Buffer(0) : ''
+    resBody = res.bodytype === 'buffer' ? Buffer.alloc(0) : ''
     // 试图请求
     apiModelProxy(res, this.options)
     // 有请求结果
@@ -335,7 +335,7 @@ class PushEvent extends PushBaseEvent {
     }
     // 转换推送类型
     if (this.bodytype === 'buffer' && ((typeof body) === 'string')) {
-      body = new Buffer(body, 'utf-8')
+      body = Buffer.from(body, 'utf-8')
     } else if (this.bodytype === 'string' && Buffer.isBuffer(body)) {
       body = body.toString('utf-8')
     }
