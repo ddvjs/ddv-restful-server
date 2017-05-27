@@ -23,15 +23,29 @@ class RpcCall extends RpcBaseServer {
         headers: JSON.stringify(headers),
         time_stamp: timeStamp
       }, body, `CALL ${path} RPC/1.0`)
-      .then(res => {
-        // {success, fails}
-        console.log('resdfsfsdfsfss', res)
+      .then(({body}) => {
+        var res
+        try {
+          res = JSON.parse(body)
+        } catch (e) {
+          e.errorId = e.errorId || 'JSON_PARSE_ERROR'
+          return Promise.reject(e)
+        }
+        return res
       })
       .catch(e => {
-        console.log('e', e)
-        e.errorId = ''
-        e.message = ''
-        return Promise.reject(e)
+        var res = {}
+        try {
+          res = JSON.parse(e.body)
+        } catch (e1) {
+          res = e
+        }
+        res.errorId = e.errorId = res.errorId || 'RPC_CALL_ERROR_ON_HUB'
+        res.message = e.message = res.message || 'rpcCall error on Hub'
+        console.log('\n\n\n')
+        console.log(res)
+        console.log('\n\n\n')
+        return Promise.reject(res)
       })
     })
   }

@@ -2,6 +2,7 @@
 const rpcCallByPathEvent = Object.create(null)
 const worker = require('ddv-worker')
 const workerUtil = require('ddv-worker/util')
+const logger = require('../../lib/logger.js')
 // 返回一个纯粹的空对象
 module.exports = rpcCallByPathEvent
 
@@ -13,16 +14,18 @@ worker.on('worker::event::rpcCall', function (res, handle, fromWorkerId, toWorke
   .then(callRes => {
     callRes.errorId = callRes.errorId || 'OK'
     callRes.message = callRes.message || ''
-    worker.sendToWorker(fromWorkerId, 'rpcCallCallback', {id: res.id, res: callRes})
+    worker.sendToWorker(fromWorkerId, 'rpcCallCallback', {id: res.id, data: callRes})
+    .catch(e => logger.error(e))
   })
   .catch(e => {
     worker.sendToWorker(fromWorkerId, 'rpcCallCallback', {
       id: res.id,
-      res: {
+      data: {
         message: e.message || 'rpc call fail rpcCall',
         errorId: e.errorId || 'RPC_CALL_FAIL_RPCCALL'
       }
     })
+    .catch(e => logger.error(e))
   })
 })
 function onRpcCall (message) {

@@ -159,17 +159,18 @@ class RpcBaseServer extends EventEmitter {
               // 循环加入fails
               fails.push(t)
             })
+            timeStampS = guid = timeStamp = res = void 0
           })
           .catch(e => {
             Array.isArray(timeStampS[timeStamp]) && timeStampS[timeStamp].forEach(wcid => {
               // 循环加入fails
               fails.push({'gwcid': (`${guid}-${wcid}-${timeStamp}`), 'errorId': e.errorId || 'GWCID_FORMAT_ERROR', 'message': e.message || e.errorId || 'gwcid wrong format'})
             })
+            timeStampS = guid = timeStamp = res = void 0
           })
           calls.push(res)
-          timeStamp = res = void 0
         }
-        timeStampS = guid = void 0
+        void 0
       }
       return Promise.all(calls)
     })

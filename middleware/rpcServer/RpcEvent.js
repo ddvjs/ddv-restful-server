@@ -41,6 +41,8 @@ class RpcEvent extends RpcBaseEvent {
           success.push(res)
         })
         .catch(e => {
+          logger.error('sendToWorker Error')
+          logger.error(e)
           cids.forEach(cid => {
             fails.push({
               wcid: `${workerId}-${cid}`,
@@ -68,17 +70,20 @@ function sendToWorker (workerId, message) {
     rpcCallProcessCallback[id] = [resolve, reject]
     // 发送信息到目标进程
     worker.sendToWorker(workerId, 'rpcCall', {id, message})
+    .catch(e => logger.error(e))
   })
 }
 
 worker.on('worker::event::rpcCallCallback', function (res, handle, fromWorkerId, toWorkerId) {
-  if (!(res.id && rpcCallProcessCallback[res.id] && rpcCallProcessCallback[res.id][0])) {
+  if (!(res.id && res.data && rpcCallProcessCallback[res.id] && rpcCallProcessCallback[res.id][0])) {
     logger.error('worker::event::rpcCallCallback-Error', res)
     return
   }
-  if (res.errorId === 'ok') {
-    rpcCallProcessCallback[res.id][0](res.res)
+  var data = res.data
+  if (data.errorId && data.errorId.toUpperCase() === 'OK') {
+    rpcCallProcessCallback[res.id][0](data)
   } else {
-    rpcCallProcessCallback[res.id][1](new RpcError(res.message, res.errorId))
+    rpcCallProcessCallback[res.id][1](new RpcError(data.message, data.errorId))
   }
+  data = res = handle = fromWorkerId = toWorkerId = void 0
 })

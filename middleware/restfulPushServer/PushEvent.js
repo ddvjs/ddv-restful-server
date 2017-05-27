@@ -49,7 +49,6 @@ class PushEvent extends PushBaseEvent {
       return
     }
     this.isPushOpened = false
-    console.log(requestId)
   }
   // 打开推送
   pushOpen (headers, body, res) {
