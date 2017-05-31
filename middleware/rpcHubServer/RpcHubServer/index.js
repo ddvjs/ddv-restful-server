@@ -45,7 +45,6 @@ class RpcCall extends RpcBaseServer {
         return Promise.reject(res)
       })
       .then(res=>{
-        console.log('\n\nres===',res)
         return res
       })
     })

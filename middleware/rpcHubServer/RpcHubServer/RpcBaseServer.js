@@ -143,7 +143,6 @@ class RpcBaseServer extends EventEmitter {
           // 建立连接
           let res = this.rpcCall(data.id, guid, timeStampS[timeStamp], data.headers, data.body, data.path, timeStamp)
           .then(res => {
-            console.log('res', res)
             Array.isArray(res.success) && res.success.forEach(t => {
               if (t.wcid) {
                 t.gwcid = `${guid}-${t.wcid}-${timeStamp}`
@@ -162,7 +161,6 @@ class RpcBaseServer extends EventEmitter {
             })
           })
           .catch(e => {
-            console.log('\n===========we', e)
             Array.isArray(timeStampS[timeStamp]) && timeStampS[timeStamp].forEach(wcid => {
               // 循环加入fails
               fails.push({'gwcid': (`${guid}-${wcid}-${timeStamp}`), 'errorId': e.errorId || 'GWCID_FORMAT_ERROR', 'message': e.message || e.errorId || 'gwcid wrong format'})
