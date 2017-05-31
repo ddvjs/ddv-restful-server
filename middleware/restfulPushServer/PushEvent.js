@@ -36,19 +36,67 @@ class PushEvent extends PushBaseEvent {
     this.options.apiUrlOpt.protocol = urlObj.protocol
     this.options.apiUrlOpt.host = urlObj.hostname
     this.options.apiUrlOpt.port = urlObj.port
+    urlObj = void 0
   }
   // 关闭推送
   pushClose (headers, body, res) {
+    // 请求id
     var requestId
+    // 头部信息
+    var headersObj = Object.create(null)
+    var headersString
+    // 配置信息
+    var opt = Object.create(null)
+    // 地址信息
+    var urlObj = url.parse(this.options.rpcEvent.api_url + this.options.rpcEvent.on_rtmp_box_heartbeat)
+    // 是否是Buffer
+    var isBuffer = res.headers.bodytype === 'buffer'
+    var promise
+
+    requestId = res.headers && (res.headers.request_id || res.headers.requestId || res.headers.requestid)
+    // 全局链接id
+    headersObj.gwcid = this.gwcid
+    // 服务器唯一识别号
+    headersObj.serverGuid = this.serverGuid
+    headersString = querystring.stringify(headersObj)
+
     if (!this.isWsOpen()) {
       logger.error(new PushError(`${this.gwcid}Has been closed, on pushClose`, 'HAS_BEEN_CLOSED'))
       return
     }
 
-    if (!(res.headers && (requestId = res.headers.request_id || res.headers.requestId || res.headers.requestid))) {
-      return
+    if (res.headers && requestId) {
+      promise = ddvRowraw.stringifyPromise(
+        {
+          request_id: requestId
+        },
+        (isBuffer ? Buffer.alloc(0) : ''),
+        'PUSH/1.0 200 OK'
+      )
+      .then(raw => {
+        this.send(raw)
+        isBuffer = void 0
+      })
+      .catch(e => {
+        logger.error(new PushError('error'))
+      })
+    } else {
+      promise = Promise.resolve()
     }
-    this.isPushOpened = false
+
+    promise.then(() => {
+      if (!this.isPushOpened) {
+        return
+      }
+      this.isPushOpened = false
+
+      opt.method = 'PUT'
+      opt.path = urlObj.path || '/'
+      opt.headers = Object.create(null)
+      opt.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+      opt.headers['Content-Length'] = Buffer.byteLength(headersString, 'utf8')
+      Object.assign(opt, this.options.apiUrlOpt)
+    })
   }
   // 打开推送
   pushOpen (headers, body, res) {
@@ -88,7 +136,7 @@ class PushEvent extends PushBaseEvent {
           console.log('签名结束', res)
         })
         .catch(e => {
-          console.log('签名失败', e)
+          logger.error(new PushError('Signature failed'))
         })
       })
     }

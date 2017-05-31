@@ -38,7 +38,7 @@ class RpcEvent extends RpcBaseEvent {
           bodyBase64
         })
         .then(res => {
-          success.push.apply(success, res.success||[])
+          success.push.apply(success, res.success || [])
         })
         .catch(e => {
           logger.error('sendToWorker Error')
