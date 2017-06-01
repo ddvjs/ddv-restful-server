@@ -39,6 +39,7 @@ class RpcEvent extends RpcBaseEvent {
         })
         .then(res => {
           success.push.apply(success, res.success || [])
+          fails.push.apply(fails, res.fails || [])
         })
         .catch(e => {
           logger.error('sendToWorker Error')
@@ -70,7 +71,10 @@ function sendToWorker (workerId, message) {
     rpcCallProcessCallback[id] = [resolve, reject]
     // 发送信息到目标进程
     worker.sendToWorker(workerId, 'rpcCall', {id, message})
-    .catch(e => logger.error(e))
+    .catch(e => {
+      reject(e)
+      delete rpcCallProcessCallback[id]
+    })
   })
 }
 

@@ -68,7 +68,7 @@ class PushEvent extends PushBaseEvent {
     if (res.headers && requestId) {
       promise = ddvRowraw.stringifyPromise(
         {
-          request_id: requestId
+          'request_id': requestId
         },
         (isBuffer ? Buffer.alloc(0) : ''),
         'PUSH/1.0 200 OK'
@@ -96,6 +96,9 @@ class PushEvent extends PushBaseEvent {
       opt.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
       opt.headers['Content-Length'] = Buffer.byteLength(headersString, 'utf8')
       Object.assign(opt, this.options.apiUrlOpt)
+
+      return request(opt)
+      .then(res => {})
     })
   }
   // 打开推送
