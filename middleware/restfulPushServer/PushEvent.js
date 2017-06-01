@@ -112,7 +112,7 @@ class PushEvent extends PushBaseEvent {
       return
     }
     // 请求id
-    headersObj.requestId = res.headers && (res.headers.request_id || res.headers.requestId || res.headers.requestid)
+    headersObj.request_id = res.headers && (res.headers.request_id || res.headers.requestId || res.headers.requestid)
     // 全局链接id
     headersObj.gwcid = this.gwcid
     // 服务器唯一识别号
@@ -120,7 +120,7 @@ class PushEvent extends PushBaseEvent {
     // 判断当前是否使用buffer模式返回
     let isBuffer = this.bodytype === 'buffer' || (this.bodytype === 'auto' && res.headers.bodytype === 'buffer')
 
-    if (!(res.headers && headersObj.requestId)) {
+    if (!(res.headers && headersObj.request_id)) {
       logger.error(new PushError('requestId Not FOUND'))
       return
     }
