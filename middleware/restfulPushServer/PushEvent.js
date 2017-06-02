@@ -98,7 +98,9 @@ class PushEvent extends PushBaseEvent {
       Object.assign(opt, this.options.apiUrlOpt)
 
       return request(opt)
-      .then(res => {})
+      .then(res => {
+        console.log('关闭推送', res)
+      })
     })
   }
   // 打开推送
