@@ -190,6 +190,7 @@ class PushEvent extends PushBaseEvent {
         headersObj = statR = isBuffer = rawR = void 0
       })
       .catch(e => {
+        // 发送到客户端，发送失败
         console.log(321321321231, e)
       })
     }
