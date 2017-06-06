@@ -10,7 +10,7 @@ const crypto = require('crypto')
 const querystring = require('querystring')
 const url = require('url')
 const PushError = require('./PushError')
-const regular = /\-/g
+const regular = /-/g
 
 class PushEvent extends PushBaseEvent {
   constructor (options, ws, req) {
