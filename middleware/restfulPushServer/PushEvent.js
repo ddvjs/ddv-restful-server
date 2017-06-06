@@ -31,7 +31,7 @@ class PushEvent extends PushBaseEvent {
   // 设置配置信息
   setConfigInfo () {
     // 解析url
-    let urlObj = url.parse(this.options.rpcEvent.api_url)
+    let urlObj = url.parse(this.options.rpcEvent.apiUrl)
     this.options.apiUrlOpt = Object.create(null)
     this.options.apiUrlOpt.protocol = urlObj.protocol
     this.options.apiUrlOpt.host = urlObj.hostname
@@ -48,7 +48,7 @@ class PushEvent extends PushBaseEvent {
     // 配置信息
     var opt = Object.create(null)
     // 地址信息
-    var urlObj = url.parse(this.options.rpcEvent.api_url + this.options.rpcEvent.on_rtmp_box_heartbeat)
+    var urlObj = url.parse(this.options.rpcEvent.apiUrl + this.options.rpcEvent.onRtmpBoxHeartbeat)
     // 是否是Buffer
     var isBuffer = res.headers.bodytype === 'buffer'
     var promise
@@ -136,13 +136,8 @@ class PushEvent extends PushBaseEvent {
       )
       .then(raw => this.send(raw))
       .catch(e => {
-        this.pushPing(headers, body, res)
-        .then((res) => {
-          console.log('签名结束', res)
-        })
-        .catch(e => {
-          logger.error(new PushError('Signature failed'))
-        })
+        logger.error('error:send data to client')
+        logger.error(e)
       })
     }
     // 标记正在打开推送系统
@@ -173,8 +168,8 @@ class PushEvent extends PushBaseEvent {
       )
       .then(raw => this.send(raw))
       .catch(e => {
-        logger.error(new PushError('error'))
-        logger.error(new PushError(e))
+        logger.error('error:send data to client')
+        logger.error(e)
       })
 
       headersObj = statR = rawR = void 0
@@ -189,10 +184,13 @@ class PushEvent extends PushBaseEvent {
         )
         .then(raw => this.send(raw))
         .catch(e => {
-          logger.error(new PushError('error'))
-          logger.error(new PushError(e))
+          logger.error('error:send data to client')
+          logger.error(e)
         })
         headersObj = statR = isBuffer = rawR = void 0
+      })
+      .catch(e => {
+        console.log(321321321231, e)
       })
     }
   }
@@ -205,8 +203,8 @@ class PushEvent extends PushBaseEvent {
     Object.assign(opt, this.pingDataOptSign)
     // 生成唯一请求id
     opt.request_id = workerUtil.createRequestId()
-    // 获取onOpen地址
-    opt.path = this.options.rpcEvent.on_open
+    // 获取onPushOpen地址
+    opt.path = this.options.rpcEvent.onPushOpen
 
     return this.request(opt, (res.headers.bodytype === 'buffer' ? (Buffer.alloc(0)) : ''), 'PING /v1_0/sign PUSH/1.0')
     .then(res => {
@@ -250,15 +248,17 @@ class PushEvent extends PushBaseEvent {
         // Authorization 首字母大写
         opt.headers.Authorization = res.headers.authorization
       }
-
       return request(opt, this.pingDataRaw)
-      .then(({headers, statusCode, statusMessage, body}) => ({headers, body, res}))
-    })
-    .catch(e => {
-      logger.error('Signature failed')
-      logger.error(e)
-      return new Promise((resolve, reject) => {
-        reject(new PushError('Signature failed', 'SIGNATURE_FAILED'))
+      .then(({headers, statusCode, statusMessage, body}) => {
+        // 判断发送请求是否正常
+        if (statusCode >= 200 && statusCode < 300) {
+          return {headers, body, res}
+        } else {
+          logger.error(statusCode)
+          logger.error(statusMessage)
+          logger.error(body.toString())
+          return Promise.reject(new PushError(statusMessage, (statusMessage || '').toUpperCase()))
+        }
       })
     })
   }
@@ -288,7 +288,7 @@ class PushEvent extends PushBaseEvent {
     // 以这个协议进行编码
     this.pingDataH['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
     // 解析url
-    let urlObj = url.parse(this.options.rpcEvent.api_url)
+    let urlObj = url.parse(this.options.rpcEvent.apiUrl)
     // 构造请求对象
     this.pingDataOpt = Object.create(null)
     // 获取php-传输协议 http:/https:
