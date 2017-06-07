@@ -19,9 +19,11 @@ class PushEvent extends PushBaseEvent {
     wsConnQueue[this.connId] = wsConnQueue[this.connId] || this
     this.setConfigInfo()
     this.pushEventInit()
+    this.pushEventRpcSend()
   }
   pushEventInit () {
     this.ws.on('close', this.onWsConnQueueClose.bind(this))
+    this.ws.on('close', this.onCloseEventRpcSend.bind(this))
     // 获取文件事件
     this.on('protocol::apimodelproxy', this.onApiModelProxy.bind(this))
     this.on(['push', 'ping', '/v1_0/init'], this.pushPingHeartbeat.bind(this))
@@ -37,6 +39,10 @@ class PushEvent extends PushBaseEvent {
     this.options.apiUrlOpt.host = urlObj.hostname
     this.options.apiUrlOpt.port = urlObj.port
     urlObj = void 0
+  }
+  // onConn推送给php
+  pushEventRpcSend () {
+
   }
   // 关闭推送
   pushClose (headers, body, res) {
@@ -408,6 +414,10 @@ class PushEvent extends PushBaseEvent {
       workerUtil.isFunction(wsConnQueue[this.connId].destroy) && wsConnQueue[this.connId].destroy()
       delete wsConnQueue[this.connId]
     }
+  }
+  // 服务器长连接断开事件
+  onCloseEventRpcSend () {
+
   }
 }
 
