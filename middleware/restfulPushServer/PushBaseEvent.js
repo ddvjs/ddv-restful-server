@@ -2,13 +2,13 @@
 const logger = require('../../lib/logger.js')
 const MessageEventEmitter = require('../../lib/MessageEventEmitter.js')
 class PushBaseEvent extends MessageEventEmitter {
-  constructor (options, ws, req) {
+  constructor (ws, req, options) {
     super(req.gwcid)
-    this.baseInit(options, ws, req)
+    this.baseInit(ws, req, options)
     this.wsEventBaseInit()
   }
   // 初始化
-  baseInit (options, ws, req) {
+  baseInit (ws, req, options) {
     this.options = options
     this.ws = ws
     this.req = req

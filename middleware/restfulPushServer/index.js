@@ -5,7 +5,7 @@ const workerUtil = require('ddv-worker/util')
 const PushError = require('./PushError')
 function restfulPushServerMiddleware (options, serverRpcEvent) {
   return function restfulPushServer (ws, req) {
-    wsConnQueue[req.requestId] = new PushEvent(options, ws, req)
+    wsConnQueue[req.requestId] = new PushEvent(ws, req, options, serverRpcEvent)
   }
 }
 function sendMessageByConnId (connId, headers, body) {

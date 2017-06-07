@@ -13,17 +13,19 @@ const PushError = require('./PushError')
 const regular = /-/g
 
 class PushEvent extends PushBaseEvent {
-  constructor (options, ws, req) {
-    super(options, ws, req)
+  constructor (ws, req, options, serverRpcEvent) {
+    super(ws, req, options)
     // 如果队列没有这个对象就加入这个对象
     wsConnQueue[this.connId] = wsConnQueue[this.connId] || this
     this.setConfigInfo()
     this.pushEventInit()
-    this.pushEventRpcSend()
+    this.serverRpcEvent = serverRpcEvent
+    // 触发连接
+    this.serverRpcEvent.emitOnConn(this.gwcid)
   }
   pushEventInit () {
     this.ws.on('close', this.onWsConnQueueClose.bind(this))
-    this.ws.on('close', this.onCloseEventRpcSend.bind(this))
+    this.ws.on('close', () => this.serverRpcEvent.emitOnClose(this.gwcid))
     // 获取文件事件
     this.on('protocol::apimodelproxy', this.onApiModelProxy.bind(this))
     this.on(['push', 'ping', '/v1_0/init'], this.pushPingHeartbeat.bind(this))
@@ -39,10 +41,6 @@ class PushEvent extends PushBaseEvent {
     this.options.apiUrlOpt.host = urlObj.hostname
     this.options.apiUrlOpt.port = urlObj.port
     urlObj = void 0
-  }
-  // onConn推送给php
-  pushEventRpcSend () {
-
   }
   // 关闭推送
   pushClose (headers, body, res) {
@@ -104,8 +102,15 @@ class PushEvent extends PushBaseEvent {
       Object.assign(opt, this.options.apiUrlOpt)
 
       return request(opt)
-      .then(res => {
-        console.log('关闭推送', res)
+      .then(({headers, statusCode, statusMessage, body}) => {
+        if (statusCode >= 200 && statusCode < 300) {
+          return {headers, body}
+        } else {
+          logger.error(statusCode)
+          logger.error(statusMessage)
+          logger.error(body.toString())
+          return Promise.reject(new PushError(statusMessage, (statusMessage || '').toUpperCase()))
+        }
       })
     })
   }
@@ -114,7 +119,6 @@ class PushEvent extends PushBaseEvent {
     var headersObj = Object.create(null)
     var statR = ''
     var rawR = ''
-
     if (!this.isWsOpen()) {
       logger.error(new PushError(`${this.gwcid}Has been closed, on pushOpen`, 'HAS_BEEN_CLOSED'))
       return
@@ -417,7 +421,34 @@ class PushEvent extends PushBaseEvent {
   }
   // 服务器长连接断开事件
   onCloseEventRpcSend () {
+    var headersObj = Object.create(null)
+    var headersString
+    var opts = Object.create(null)
+    opts.method = 'PUT'
+    opts.path = this.options.rpcEvent.onClose
+    Object.assign(opts, this.options.apiUrlOpt)
+    // 全局链接id
+    headersObj.gwcid = this.gwcid
+    // 服务器唯一识别号
+    headersObj.serverGuid = this.serverGuid
+    headersString = querystring.stringify(headersObj)
+    opts.headers = Object.create(null)
+    opts.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+    opts.headers['Content-Length'] = Buffer.byteLength(headersString, 'utf8')
 
+    return request(opts)
+    .then(({headers, statusCode, statusMessage, body}) => {
+      headersObj = headersString = opts = void 0
+
+      if (statusCode >= 200 && statusCode < 300) {
+        return {headers, body}
+      } else {
+        logger.error(statusCode)
+        logger.error(statusMessage)
+        logger.error(body.toString())
+        return Promise.reject(new PushError(statusMessage, (statusMessage || '').toUpperCase()))
+      }
+    })
   }
 }
 
