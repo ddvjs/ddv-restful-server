@@ -13,8 +13,8 @@ const PushError = require('./PushError')
 const regular = /-/g
 
 class PushEvent extends PushBaseEvent {
-  constructor (ws, req, options, serverRpcEvent) {
-    super(ws, req, options)
+  constructor (ws, req, serverRpcEvent) {
+    super(ws, req, serverRpcEvent.options)
     // 如果队列没有这个对象就加入这个对象
     wsConnQueue[this.connId] = wsConnQueue[this.connId] || this
     this.setConfigInfo()

@@ -3,9 +3,9 @@ const PushEvent = require('./PushEvent.js')
 const wsConnQueue = require('./wsConnQueue.js')
 const workerUtil = require('ddv-worker/util')
 const PushError = require('./PushError')
-function restfulPushServerMiddleware (options, serverRpcEvent) {
+function restfulPushServerMiddleware (serverRpcEvent) {
   return function restfulPushServer (ws, req) {
-    wsConnQueue[req.requestId] = new PushEvent(ws, req, options, serverRpcEvent)
+    wsConnQueue[req.requestId] = new PushEvent(ws, req, serverRpcEvent)
   }
 }
 function sendMessageByConnId (connId, headers, body) {
