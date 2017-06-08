@@ -419,37 +419,6 @@ class PushEvent extends PushBaseEvent {
       delete wsConnQueue[this.connId]
     }
   }
-  // 服务器长连接断开事件
-  onCloseEventRpcSend () {
-    var headersObj = Object.create(null)
-    var headersString
-    var opts = Object.create(null)
-    opts.method = 'PUT'
-    opts.path = this.options.rpcEvent.onClose
-    Object.assign(opts, this.options.apiUrlOpt)
-    // 全局链接id
-    headersObj.gwcid = this.gwcid
-    // 服务器唯一识别号
-    headersObj.serverGuid = this.serverGuid
-    headersString = querystring.stringify(headersObj)
-    opts.headers = Object.create(null)
-    opts.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
-    opts.headers['Content-Length'] = Buffer.byteLength(headersString, 'utf8')
-
-    return request(opts)
-    .then(({headers, statusCode, statusMessage, body}) => {
-      headersObj = headersString = opts = void 0
-
-      if (statusCode >= 200 && statusCode < 300) {
-        return {headers, body}
-      } else {
-        logger.error(statusCode)
-        logger.error(statusMessage)
-        logger.error(body.toString())
-        return Promise.reject(new PushError(statusMessage, (statusMessage || '').toUpperCase()))
-      }
-    })
-  }
 }
 
 module.exports = PushEvent
