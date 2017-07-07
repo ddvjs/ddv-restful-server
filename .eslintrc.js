@@ -17,6 +17,7 @@ module.exports = {
     'vars-on-top': 0,
     'no-shadow': 0,
     'no-use-before-define': 0,
+    'arrow-spacing': 0,
     // allow async-await
     'generator-star-spacing': 0,
     // allow debugger during development
