@@ -181,6 +181,9 @@ class PushEvent extends PushBaseEvent {
     } else {
       this.pushPing()
       .then(res => {
+        // 标记正在打开推送系统为否
+        this.isPushOpening = false
+        // 标记打开成功
         this.isPushOpened = true
         ddvRowraw.stringifyPromise(
           headersObj,
@@ -195,6 +198,8 @@ class PushEvent extends PushBaseEvent {
         headersObj = statR = isBuffer = rawR = void 0
       })
       .catch(e => {
+        // 标记正在打开推送系统为否
+        this.isPushOpening = false
         // 发送到客户端，发送失败
         ddvRowraw.stringifyPromise(
           headersObj,
